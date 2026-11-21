@@ -72,5 +72,5 @@ Pushed by the pipeline from `AppStore/screenshots/en-US/`. See
 
 `website/` holds the marketing page and the privacy and support pages behind the
 two store URLs. The Website workflow publishes them to
-`https://vandijkcloud.nl/controlroom/` on every change, using the `FTP_HOST`,
+`https://vandijkcloud.nl/Scaleway-ControlRoom/` on every change, using the `FTP_HOST`,
 `FTP_USERNAME` and `FTP_PASSWORD` secrets.

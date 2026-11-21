@@ -38,7 +38,7 @@ user's API keys, which live in the keychain (`expo-secure-store`).
   FreeCubeSolver's.
 - `website/`: marketing page, support (also the key setup guide) and privacy.
   The Website workflow uploads it with the icon and the App Store screenshots
-  to `vandijkcloud.nl/controlroom/` over FTP.
+  to `vandijkcloud.nl/Scaleway-ControlRoom/` over FTP.
 - Workflows: `ci.yml` (every push), `release.yml` (TestFlight + metadata,
   manual), `screenshots.yml` (simulator screenshots, manual, commits them),
   `website.yml` (on website changes and after Screenshots).

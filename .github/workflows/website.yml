@@ -1,12 +1,10 @@
 # Uploads website/ (plus the app icon and the App Store screenshots) to
-# https://vandijkcloud.nl/controlroom/ over FTP.
+# https://vandijkcloud.nl/Scaleway-ControlRoom/ over FTP.
 #
-# Repository secrets: FTP_HOST, FTP_USERNAME, FTP_PASSWORD (the same FTP
-# account as the vandijkcloud.nl site, whose root is the web root).
-#
-# Everything goes to /controlroom/ only. FTP-Deploy-Action keeps its sync state
-# in that folder and only ever deletes files it uploaded there itself, so the
-# rest of the site is never touched.
+# Repository secrets: FTP_HOST, FTP_USERNAME, FTP_PASSWORD. The FTP user is
+# locked to the folder served at that URL, so its root (/) is the site's root.
+# FTP-Deploy-Action keeps its sync state there and only ever deletes files it
+# uploaded itself.
 name: Website
 
 on:
@@ -48,4 +46,4 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./site/
-          server-dir: /controlroom/
+          server-dir: /
