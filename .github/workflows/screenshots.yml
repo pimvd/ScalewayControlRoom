@@ -84,6 +84,11 @@ jobs:
             exit 0
           fi
           git commit -m "Update App Store screenshots"
-          # The build leaves generated changes behind; only the pictures are committed.
-          git pull --rebase --autostash origin "$GITHUB_REF_NAME"
-          git push origin "HEAD:$GITHUB_REF_NAME"
+          # The build leaves generated changes behind; only the pictures are
+          # committed. Someone may push meanwhile: rebase and retry.
+          for attempt in 1 2 3; do
+            git pull --rebase --autostash origin "$GITHUB_REF_NAME"
+            git push origin "HEAD:$GITHUB_REF_NAME" && exit 0
+            sleep 5
+          done
+          exit 1
