@@ -6,6 +6,7 @@ struct RootView: View {
     @State private var tab: AppTab = .instances
     @State private var instancesPath: [Destination] = []
     @State private var serverlessPath: [Destination] = []
+    @State private var otherPath: [Destination] = []
 
     var body: some View {
         TabView(selection: $tab) {
@@ -20,6 +21,12 @@ struct RootView: View {
             }
             .tabItem { Label("Serverless", systemImage: "bolt") }
             .tag(AppTab.serverless)
+
+            NavigationStack(path: $otherPath) {
+                OtherView().withDestinations()
+            }
+            .tabItem { Label("Other", systemImage: "square.stack.3d.up") }
+            .tag(AppTab.other)
 
             NavigationStack {
                 CostsView()
@@ -55,6 +62,7 @@ struct RootView: View {
         switch destination.tab {
         case .instances: instancesPath = destination.path
         case .serverless: serverlessPath = destination.path
+        case .other: otherPath = destination.path
         default: break
         }
     }
@@ -66,6 +74,7 @@ private extension View {
             switch destination {
             case .instance(let id): InstanceDetailView(id: id)
             case .serverless(let id): ServerlessDetailView(id: id)
+            case .resource(let id): ResourceDetailView(id: id)
             case .logs(let kind, let id): LogsView(kind: kind, id: id)
             case .metrics(let kind, let id): MetricsView(kind: kind, id: id)
             case .metric(let kind, let id, let name): MetricChartView(kind: kind, id: id, name: name)

@@ -256,6 +256,10 @@ public protocol ScalewayClient: Sendable {
     /// Commercial type → price per hour.
     func hourlyPrices(zone: Zone) async throws -> [String: Double]
     func listServerless(region: Region) async throws -> [ServerlessApp]
+    /// One product's resources in a region or zone (nil: a global product).
+    func listResources(_ product: Product, place: String?) async throws -> [Resource]
+    /// Project ID → name.
+    func projectNames() async throws -> [String: String]
     /// The newest lines of the last `minutes`, newest first.
     func logs(target: CockpitTarget, minutes: Int) async throws -> LogResult
     /// Which metrics Cockpit has for the resource in the last `minutes`.

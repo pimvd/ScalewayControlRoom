@@ -38,7 +38,9 @@ struct MetricsView: View {
                         if let server = resource?.server {
                             InstanceCockpitSetupView(server: server, what: "metrics")
                         } else {
-                            Text("No metrics in this period. Scaleway sends serverless metrics to Cockpit by itself; they appear once the app has run.")
+                            Text(kind == .resource
+                                 ? "No metrics in this period. Scaleway sends the metrics of its managed products to Cockpit by itself, where the product has any."
+                                 : "No metrics in this period. Scaleway sends serverless metrics to Cockpit by itself; they appear once the app has run.")
                                 .foregroundStyle(.secondary)
                         }
                     }

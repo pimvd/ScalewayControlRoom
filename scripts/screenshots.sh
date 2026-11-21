@@ -50,6 +50,7 @@ shot 04-logs "/logs?kind=serverless&id=demo-c1"
 shot 05-costs "/costs"
 shot 06-instance-logs "/logs?kind=instance&id=demo-3"
 shot 07-metric "/metric?kind=serverless&id=demo-c1&name=http_requests_total"
+shot 08-other "/other"
 
 md5 "$out"/*.png
 

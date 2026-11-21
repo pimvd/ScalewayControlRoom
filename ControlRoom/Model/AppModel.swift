@@ -2,7 +2,7 @@ import ControlRoomKit
 import Foundation
 
 struct KeyProblem: Identifiable, Hashable {
-    enum Area { case instances, serverless }
+    enum Area { case instances, serverless, other }
     var keyID: String
     var area: Area
     var message: String
@@ -17,6 +17,10 @@ final class AppModel {
     private(set) var loaded = false
     private(set) var servers: [Listed<Server>] = []
     private(set) var serverless: [Listed<ServerlessApp>] = []
+    /// Everything else, loaded when the Other tab asks for it.
+    private(set) var resources: [Listed<Resource>] = []
+    private(set) var projectNames: [String: String] = [:]
+    private(set) var loadingResources = false
     private(set) var problems: [KeyProblem] = []
     /// "zone/commercialType" → price per hour.
     private(set) var prices: [String: Double] = [:]
@@ -52,7 +56,36 @@ final class AppModel {
         case .serverless:
             guard let listed = serverless.first(where: { $0.id == id }) else { return nil }
             return CockpitResource(target: listed.item.cockpitTarget, keyIDs: listed.keyIDs, server: nil)
+        case .resource:
+            guard let listed = resources.first(where: { $0.id == id }), let target = listed.item.cockpitTarget else { return nil }
+            return CockpitResource(target: target, keyIDs: listed.keyIDs, server: nil)
         }
+    }
+
+    /// Lists every other resource of every key: some 170 requests per key,
+    /// so only when the Other tab is shown or pulled, not with every refresh.
+    func refreshResources() async {
+        guard !loadingResources else { return }
+        loadingResources = true
+        defer { loadingResources = false }
+        let current = keys
+        let results = await withTaskGroup(of: (keyID: String, resources: [Resource], problem: String?, names: [String: String]).self) { group in
+            for key in current {
+                group.addTask {
+                    let api = client(for: key)
+                    async let names = (try? await api.projectNames()) ?? [:]
+                    let listed = await listResources(api)
+                    return (key.id, listed.resources, listed.problem, await names)
+                }
+            }
+            var all: [String: (keyID: String, resources: [Resource], problem: String?, names: [String: String])] = [:]
+            for await result in group { all[result.keyID] = result }
+            return current.compactMap { all[$0.id] }
+        }
+        resources = mergeByID(results.map { (keyID: $0.keyID, items: $0.resources) })
+        projectNames = results.reduce(into: [:]) { names, result in names.merge(result.names) { first, _ in first } }
+        problems = problems.filter { $0.area != .other }
+            + results.compactMap { result in result.problem.map { KeyProblem(keyID: result.keyID, area: .other, message: $0) } }
     }
 
     // MARK: Keys
@@ -100,11 +133,12 @@ final class AppModel {
         servers = sortServers(mergeByID(listings.map { (keyID: $0.keyID, items: $0.servers) }))
         serverless = mergeByID(listings.map { (keyID: $0.keyID, items: $0.apps) })
             .sorted { $0.item.name.localizedStandardCompare($1.item.name) == .orderedAscending }
+        // The Other tab's problems come from its own loading; keep them.
         problems = listings.flatMap { listing in
             [listing.serversProblem.map { KeyProblem(keyID: listing.keyID, area: .instances, message: $0) },
              listing.appsProblem.map { KeyProblem(keyID: listing.keyID, area: .serverless, message: $0) }]
                 .compactMap { $0 }
-        }
+        } + problems.filter { $0.area == .other && current.map(\.id).contains($0.keyID) }
         loadPrices()
         pollWhileBusy()
     }
@@ -115,7 +149,7 @@ final class AppModel {
         // A key that may not see serverless has none; say why only when it may
         // not anywhere, rather than leave an unexplained empty list.
         async let apps = listAll(Region.allCases, quietForbidden: true,
-                                 forbiddenEverywhere: "This key may not list serverless apps. Add ContainersReadOnly, FunctionsReadOnly and ServerlessJobsReadOnly to its policy.") {
+                                 forbiddenEverywhere: "This key may not list serverless apps. Add AllProductsReadOnly to its policy.") {
             try await api.listServerless(region: $0)
         }
         let (i, a) = await (instances, apps)

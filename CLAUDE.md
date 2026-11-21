@@ -34,6 +34,9 @@ Swift package for everything that is not UI.
   - `Commands.swift` the copyable scw CLI and shell commands of the setup
     screens. `website/support.html` repeats the key setup commands; keep them
     in step.
+  - `Resources.swift` the Other tab: `Products.all` (one line per product
+    list endpoint, read as plain JSON), `listResources` (a few requests at a
+    time), rows and grouping.
   - `Navigation.swift` tabs, destinations, the screenshot route parser and
     `ProProducts` (the subscription IDs).
 - `ControlRoom/` (app target, a synchronized folder: new files are picked up
@@ -77,14 +80,18 @@ Swift package for everything that is not UI.
   last run's state. Cockpit labels job logs `job_definition_id` (their
   `resource_id` is the run), so `CockpitTarget.label` says which to query. A
   key that may not see serverless (401/403) is left out quietly.
+- Other: every product in `Products.all`, in every region or zone (~170
+  requests per key), only when the tab is shown or pulled. Scaleway answers
+  bursts with 429: `send` retries, `listResources` keeps 6 in flight. Object
+  Storage is missing: buckets need the S3 API and an access key.
 - Stop uses `poweroff`, which releases the hypervisor and stops compute
   billing. `stop_in_place` is deliberately not offered.
 - Pro: `ProStore.isPro(keys:)` is the one gate. It is true with an active
   subscription (StoreKit `Transaction.currentEntitlements`, no server) and
   while the demo is the only key, so App Review and screenshots see
   everything. Free: one key, instances with start/stop/reboot, this month's
-  total. Pro: more keys, serverless, logs, metrics, cost breakdown and earlier
-  months.
+  total. Pro: more keys, serverless, other resources, logs, metrics, cost
+  breakdown and earlier months.
   The purchase screen is StoreKit's `SubscriptionStoreView`.
 - Rating: after the 3rd, 20th and 60th successful start/stop with a real key
   (never in the demo), via SwiftUI's `requestReview`.

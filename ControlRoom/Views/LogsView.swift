@@ -46,7 +46,9 @@ struct LogsView: View {
                 if let server = resource?.server {
                     InstanceCockpitSetupView(server: server, what: "logs")
                 } else {
-                    Text("No logs in this period. Everything the app writes to standard output and standard error shows up here, as Scaleway sends serverless logs to Cockpit by itself.")
+                    Text(kind == .resource
+                         ? "No logs in this period. Scaleway sends the logs of its managed products to Cockpit by itself, where the product has any."
+                         : "No logs in this period. Everything the app writes to standard output and standard error shows up here, as Scaleway sends serverless logs to Cockpit by itself.")
                         .foregroundStyle(.secondary)
                 }
             }

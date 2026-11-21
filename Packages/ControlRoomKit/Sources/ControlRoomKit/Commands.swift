@@ -1,16 +1,11 @@
 /// Shell commands the setup screens show, ready to copy.
 public enum Commands {
-    /// The permission sets the app can use. A rule may only hold sets of one
-    /// scope type, so project-level and organization-level sets get a rule
-    /// each. Scoped to the organization, a rule with project-level sets covers
-    /// all current and future projects.
-    public static let projectPermissionSets = [
-        "InstancesFullAccess",
-        "ContainersReadOnly",
-        "FunctionsReadOnly",
-        "ServerlessJobsReadOnly",
-        "ObservabilityReadOnly",
-    ]
+    /// The permission sets the app can use: start and stop instances, read
+    /// everything else (the Other tab lists every product, Cockpit included).
+    /// A rule may only hold sets of one scope type, so project-level and
+    /// organization-level sets get a rule each. Scoped to the organization, a
+    /// rule with project-level sets covers all current and future projects.
+    public static let projectPermissionSets = ["InstancesFullAccess", "AllProductsReadOnly"]
     public static let organizationPermissionSets = ["BillingReadOnly"]
 
     /// Policy rule arguments: `rules.N.<scope>` and its permission sets.

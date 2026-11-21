@@ -29,10 +29,7 @@ APP=$(scw iam application create name=controlroom description=&quot;ControlRoom 
 scw iam policy create name=controlroom application-id=$APP \
   rules.0.organization-id=$ORG \
   rules.0.permission-set-names.0=InstancesFullAccess \
-  rules.0.permission-set-names.1=ContainersReadOnly \
-  rules.0.permission-set-names.2=FunctionsReadOnly \
-  rules.0.permission-set-names.3=ServerlessJobsReadOnly \
-  rules.0.permission-set-names.4=ObservabilityReadOnly \
+  rules.0.permission-set-names.1=AllProductsReadOnly \
   rules.1.organization-id=$ORG \
   rules.1.permission-set-names.0=BillingReadOnly &amp;&amp;
 scw iam api-key create application-id=$APP description=controlroom &amp;&amp;
@@ -46,8 +43,7 @@ echo &quot;Organization ID: $ORG&quot;</code></pre>
       <ul>
         <li><code>InstancesFullAccess</code> for the projects whose instances you want to start and stop. Use <code>InstancesReadOnly</code> to only look.</li>
         <li><code>BillingReadOnly</code> at organization level, to see costs.</li>
-        <li><code>ContainersReadOnly</code>, <code>FunctionsReadOnly</code> and <code>ServerlessJobsReadOnly</code>, to list serverless containers, functions and jobs.</li>
-        <li><code>ObservabilityReadOnly</code>, to read logs and metrics from Cockpit.</li>
+        <li><code>AllProductsReadOnly</code>, to list serverless apps and every other resource (databases, volumes, IPs, domains, secrets and the rest) and read their logs and metrics from Cockpit. Narrower sets work too: for example <code>ContainersReadOnly</code>, <code>FunctionsReadOnly</code>, <code>ServerlessJobsReadOnly</code> and <code>ObservabilityReadOnly</code> for serverless with its logs and metrics only. Listing secrets shows their names, never their values.</li>
       </ul>
       Leave out what you do not want: the app hides what its key may not do.</li>
     <li>Open the application, choose <em>API keys → Generate API key</em>, and copy the <strong>secret key</strong>. It is shown only once.</li>

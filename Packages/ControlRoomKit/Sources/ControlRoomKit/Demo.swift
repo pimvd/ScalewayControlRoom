@@ -51,6 +51,15 @@ public struct DemoClient: ScalewayClient {
         return Demo.apps.filter { $0.region == region }
     }
 
+    /// No latency: the Other tab asks this some 170 times.
+    public func listResources(_ product: Product, place: String?) async throws -> [Resource] {
+        Demo.resources.filter { $0.type == product.type && ($0.location == place || place == nil) }
+    }
+
+    public func projectNames() async throws -> [String: String] {
+        ["webshop": "Webshop", "tooling": "Tooling", "ml": "Machine learning"]
+    }
+
     public func logs(target: CockpitTarget, minutes: Int) async throws -> LogResult {
         try await Task.sleep(for: latency)
         return LogResult(sources: 1, lines: Demo.logs(for: target.resourceID, now: Date()))
@@ -114,6 +123,18 @@ public enum Demo {
         Consumption(amount: 2.3, category: "Storage", product: "Object Storage", project: "tooling"),
         Consumption(amount: 2.9, category: "Network", product: "Flexible IP", project: "webshop"),
         Consumption(amount: 1.2, category: "Observability", product: "Cockpit", project: "webshop"),
+    ]
+
+    static let resources: [Resource] = [
+        Resource(id: "demo-r1", name: "orders-db", type: "Managed Database", status: "ready", location: "fr-par", projectID: "webshop"),
+        Resource(id: "demo-r2", name: "sessions", type: "Redis", status: "ready", location: "fr-par-1", projectID: "webshop"),
+        Resource(id: "demo-r3", name: "uploads", type: "Block volume", status: "in_use", location: "fr-par-1", projectID: "webshop"),
+        Resource(id: "demo-r4", name: "51.15.10.20", type: "Flexible IP", status: "attached", location: "fr-par-1", projectID: "webshop"),
+        Resource(id: "demo-r5", name: "web-lb", type: "Load Balancer", status: "ready", location: "fr-par-1", projectID: "webshop"),
+        Resource(id: "demo-r6", name: "mail.example.com", type: "Transactional Email", status: "checked", location: "fr-par", projectID: "webshop"),
+        Resource(id: "demo-r7", name: "stripe-api-key", type: "Secret", status: "ready", location: "fr-par", projectID: "webshop"),
+        Resource(id: "demo-r8", name: "example.com", type: "DNS zone", status: "active", location: "global", projectID: "webshop"),
+        Resource(id: "demo-r9", name: "metabase-db", type: "Managed Database", status: "ready", location: "fr-par", projectID: "tooling"),
     ]
 
     static let apps: [ServerlessApp] = [

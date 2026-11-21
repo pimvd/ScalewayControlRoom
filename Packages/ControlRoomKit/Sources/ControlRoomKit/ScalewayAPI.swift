@@ -48,7 +48,12 @@ public struct ScalewayAPI: ScalewayClient {
         request.httpBody = body
         request.setValue(key.secretKey, forHTTPHeaderField: "X-Auth-Token")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let (data, status) = try await transport.send(request)
+        var (data, status) = try await transport.send(request)
+        // Too many requests at once: wait a little, then try again.
+        for attempt in 1...3 where status == 429 {
+            try await Task.sleep(for: .seconds(attempt))
+            (data, status) = try await transport.send(request)
+        }
         guard (200..<300).contains(status) else {
             let message = (try? JSONDecoder().decode(ErrorBody.self, from: data))?.message ?? "HTTP \(status)"
             throw APIError(status: status, message: message)
@@ -65,13 +70,13 @@ public struct ScalewayAPI: ScalewayClient {
     }
 
     /// Fetches every page of a list endpoint: a short page is the last one.
-    private func allPages<T>(_ fetch: (Int) async throws -> [T]) async throws -> [T] {
+    private func allPages<T>(pageSize: Int = ScalewayAPI.pageSize, _ fetch: (Int) async throws -> [T]) async throws -> [T] {
         var all: [T] = []
         var page = 1
         while true {
             let items = try await fetch(page)
             all += items
-            if items.count < Self.pageSize { return all }
+            if items.count < pageSize { return all }
             page += 1
         }
     }
@@ -201,6 +206,27 @@ public struct ScalewayAPI: ScalewayClient {
         return apps
     }
 
+    public func listResources(_ product: Product, place: String?) async throws -> [Resource] {
+        let path = product.path(at: place)
+        // The Instance API filters by `organization` and pages by at most 50
+        // with `per_page`; the others say `organization_id` and `page_size`.
+        let instanceAPI = path.hasPrefix("instance/")
+        let pageSize = 50
+        let items: [JSONValue] = try await allPages(pageSize: pageSize) { page in
+            let query = instanceAPI
+                ? ["organization": key.organizationID, "per_page": String(pageSize), "page": String(page)]
+                : ["organization_id": key.organizationID, "page_size": String(pageSize), "page": String(page)]
+            let response: [String: JSONValue] = try await send(url(path, query), decoder: JSONDecoder())
+            return response[product.field]?.array ?? []
+        }
+        return items.compactMap { $0.object.flatMap { Resource($0, product: product, place: place) } }
+    }
+
+    public func projectNames() async throws -> [String: String] {
+        let projects: [APIProject] = try await pages("account/v3/projects", ["organization_id": key.organizationID], \.projects)
+        return Dictionary(projects.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+    }
+
     private func attempt<T: Sendable>(_ work: () async throws -> T) async -> Result<T, Error> {
         do { return .success(try await work()) } catch { return .failure(error) }
     }
@@ -293,6 +319,7 @@ struct ListResponse<T: Decodable>: Decodable {
     var containers: [T]?
     var functions: [T]?
     var jobDefinitions: [T]?
+    var projects: [T]?
     var jobRuns: [T]?
     var dataSources: [T]?
     var totalDiscountUntaxedValue: Double?
@@ -370,6 +397,11 @@ struct APIJobDefinition: Decodable {
 }
 
 struct APIJobRun: Decodable { var state: String }
+
+struct APIProject: Decodable {
+    var id: String
+    var name: String
+}
 
 struct APIServerless: Decodable {
     var id: String
