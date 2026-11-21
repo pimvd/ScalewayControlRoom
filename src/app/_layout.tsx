@@ -11,9 +11,9 @@ import { StoreProvider, useStore } from '@/lib/store';
 // underneath, so Back works.
 export const unstable_settings = { initialRouteName: '(tabs)' };
 
-// The Screenshots workflow writes a path to the app's `screenshotRoute`
-// setting (UserDefaults) before each launch: the demo is turned on and that
-// screen opened, without a deep link and its "Open in" prompt.
+// The Screenshots workflow launches the app with `-screenshotRoute <path>`:
+// iOS hands launch arguments to the app as settings. The demo is turned on
+// and that screen opened, without a deep link and its "Open in" prompt.
 function ScreenshotRoute() {
   const store = useStore();
   const done = useRef(false);

@@ -46,6 +46,9 @@ jobs:
 
       - run: npm ci
 
+      # Signed "to run locally" (ad hoc), as Xcode does for the simulator: an
+      # unsigned app cannot use the keychain, where the app keeps its keys,
+      # demo included.
       - name: Build for the simulator
         run: |
           npx expo prebuild --platform ios --clean
@@ -57,7 +60,10 @@ jobs:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY=- \
+            DEVELOPMENT_TEAM= \
+            PROVISIONING_PROFILE_SPECIFIER= \
             -quiet
 
       - name: Take the screenshots

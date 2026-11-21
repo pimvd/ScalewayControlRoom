@@ -29,15 +29,15 @@ xcrun simctl status_bar "$udid" override --time 9:41 --dataNetwork wifi --wifiMo
   --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
 xcrun simctl install "$udid" "$app"
 
-# Every shot starts the app cold with the screen's path in the app's settings
-# (screenshotRoute); the app turns the demo on and opens it (ScreenshotRoute in
-# src/app/_layout.tsx). A deep link would stop at iOS's "Open in" prompt.
+# Every shot starts the app cold with a launch argument naming the screen, which
+# iOS hands to the app as a setting; the app turns the demo on and opens it
+# (ScreenshotRoute in src/app/_layout.tsx). A deep link would stop at iOS's
+# "Open in" prompt.
 mkdir -p "$out"
 rm -f "$out"/*.png
 shot() {
   xcrun simctl terminate "$udid" "$bundle" 2>/dev/null || true
-  xcrun simctl spawn "$udid" defaults write "$bundle" screenshotRoute -string "$2"
-  xcrun simctl launch "$udid" "$bundle"
+  xcrun simctl launch "$udid" "$bundle" -screenshotRoute "$2"
   sleep "${3:-8}"
   xcrun simctl io "$udid" screenshot --type=png "$out/$1.png"
   echo "Took $1"

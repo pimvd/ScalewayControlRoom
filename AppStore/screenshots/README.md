@@ -6,8 +6,8 @@ hands them to `fastlane deliver`. With none committed, the workflow leaves the
 screenshots in App Store Connect alone.
 
 The **Screenshots** workflow takes them: it builds the app for the iOS
-simulator, launches it once per screen with the screen's path in the app's
-`screenshotRoute` setting, which turns on the demo and opens that screen (`scripts/screenshots.sh`), and commits
+simulator, launches it once per screen with a `-screenshotRoute` argument that
+turns on the demo and opens that screen (`scripts/screenshots.sh`), and commits
 the pictures to
 `AppStore/screenshots/en-US/`. They sort in the order they appear. The website
 deploy shows them on the marketing page too.

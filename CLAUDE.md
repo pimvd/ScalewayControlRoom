@@ -51,8 +51,8 @@ user's API keys, which live in the keychain (`expo-secure-store`).
   (App Store Connect client in `scripts/asc.py`, tests in `scripts/tests/`).
   Product IDs live in `PRO_PRODUCTS` (`src/lib/pro.tsx`) and
   `scripts/validate_subscriptions.py` keeps both in step.
-- Screenshots: `scripts/screenshots.sh` writes the screen's path to the app's
-  `screenshotRoute` setting before each launch; `ScreenshotRoute` in `src/app/_layout.tsx` turns
+- Screenshots: `scripts/screenshots.sh` launches the simulator build with
+  `-screenshotRoute <path>`; `ScreenshotRoute` in `src/app/_layout.tsx` turns
   the demo on and opens that screen. Deep links are not used because iOS asks
   "Open in …?" first. The script fails when two pictures are identical.
 - Workflows: `ci.yml` (every push), `release.yml` (TestFlight, metadata and
