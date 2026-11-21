@@ -26,7 +26,7 @@ export default function InstancesScreen() {
   const visible = filterServers(store.servers, query, filter);
 
   const renderItem = ({ item }: { item: Listed }) => {
-    const { server } = item;
+    const { item: server } = item;
     const price = store.prices[`${server.zone}/${server.commercialType}`];
     const details = [server.commercialType, server.zone];
     if (store.keys.length > 1) details.push(keyLabel(item.keyIds[0]));
@@ -57,17 +57,19 @@ export default function InstancesScreen() {
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={styles.screen}
       data={visible}
-      keyExtractor={(item) => item.server.id}
+      keyExtractor={(item) => item.item.id}
       renderItem={renderItem}
       refreshControl={<RefreshControl refreshing={store.refreshing} onRefresh={store.refresh} />}
       ListHeaderComponent={
         <View>
           <Title>Instances</Title>
-          {store.problems.map((p) => (
-            <Banner key={p.keyId}>
-              {keyLabel(p.keyId)}: {p.message}
-            </Banner>
-          ))}
+          {store.problems
+            .filter((p) => p.area === 'instances')
+            .map((p) => (
+              <Banner key={p.keyId}>
+                {keyLabel(p.keyId)}: {p.message}
+              </Banner>
+            ))}
           <TextInput
             placeholder="Search name or tag"
             placeholderTextColor={c.secondary}
@@ -112,8 +114,8 @@ function Welcome() {
     <View style={[styles.screen, { flex: 1, justifyContent: 'center' }]}>
       <Title>ControlRoom</Title>
       <Muted style={{ fontSize: 17, marginBottom: 24 }}>
-        Start and stop your Scaleway instances, and see what your organization costs this month. Your keys stay on
-        this iPhone.
+        Start and stop your Scaleway instances, read your serverless logs, and see what your organization costs
+        this month. Your keys stay on this iPhone.
       </Muted>
       <Button title="Add API key" onPress={() => router.push('/add-key')} />
       <Button title="Try the demo" kind="secondary" onPress={() => store.addKey(DEMO_KEY)} />

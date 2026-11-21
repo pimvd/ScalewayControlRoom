@@ -2,23 +2,54 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 
 import { demoClient } from './demo';
 import { loadKeys, saveKeys } from './keys';
-import { isBusy, mergeServers, type Listed } from './logic';
-import { ApiError, scalewayClient } from './scaleway';
-import { ZONES, type Key, type ScalewayClient, type ServerAction, type Zone } from './types';
+import { isBusy, mergeById, sortServers, type Listed } from './logic';
+import { isForbidden, scalewayClient } from './scaleway';
+import {
+  REGIONS,
+  ZONES,
+  type Key,
+  type ScalewayClient,
+  type Server,
+  type ServerAction,
+  type ServerlessApp,
+} from './types';
 
 export function clientFor(key: Key): ScalewayClient {
   return key.demo ? demoClient : scalewayClient(key);
 }
 
+// Runs `call` with the first of `keyIds` that is allowed to: a read-only key
+// next to a full one for the same resource is not a reason to fail.
+export async function withKeys<T>(
+  keys: Key[],
+  keyIds: string[],
+  call: (client: ScalewayClient) => Promise<T>,
+): Promise<T> {
+  let lastError: unknown = new Error('No key can reach this resource.');
+  for (const keyId of keyIds) {
+    const key = keys.find((k) => k.id === keyId);
+    if (!key) continue;
+    try {
+      return await call(clientFor(key));
+    } catch (error) {
+      lastError = error;
+      if (!isForbidden(error)) break;
+    }
+  }
+  throw lastError;
+}
+
 export interface KeyProblem {
   keyId: string;
+  area: 'instances' | 'serverless';
   message: string;
 }
 
 interface Store {
   keys: Key[];
   loaded: boolean;
-  servers: Listed[];
+  servers: Listed<Server>[];
+  serverless: Listed<ServerlessApp>[];
   problems: KeyProblem[];
   // `${zone}/${commercialType}` -> price per hour
   prices: Record<string, number>;
@@ -26,7 +57,7 @@ interface Store {
   refresh(): Promise<void>;
   addKey(key: Key): Promise<void>;
   removeKey(id: string): Promise<void>;
-  act(listed: Listed, action: ServerAction): Promise<void>;
+  act(listed: Listed<Server>, action: ServerAction): Promise<void>;
 }
 
 const StoreContext = createContext<Store | null>(null);
@@ -43,62 +74,85 @@ function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-async function listForKey(key: Key) {
-  const client = clientFor(key);
-  const zones = await Promise.allSettled(ZONES.map((zone) => client.listServers(zone)));
-  const servers = zones.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
-  const failed = ZONES.filter((_, i) => zones[i].status === 'rejected');
-  const firstError = zones.find((r) => r.status === 'rejected') as PromiseRejectedResult | undefined;
-  let problem: string | undefined;
-  if (firstError) {
-    problem =
-      failed.length === ZONES.length
-        ? message(firstError.reason)
-        : `Could not load ${failed.join(', ')}: ${message(firstError.reason)}`;
-  }
-  return { keyId: key.id, servers, problem };
+// Lists `places` in parallel. Places that fail are named in the problem, unless
+// the key simply may not see this kind of resource: then it is left out quietly.
+async function listAll<P extends string, T>(places: readonly P[], list: (place: P) => Promise<T[]>, quietForbidden: boolean) {
+  const results = await Promise.allSettled(places.map(list));
+  const items = results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+  const failed = places.filter((_, i) => {
+    const r = results[i];
+    return r.status === 'rejected' && !(quietForbidden && isForbidden(r.reason));
+  });
+  if (!failed.length) return { items };
+  const reason = (results[places.indexOf(failed[0])] as PromiseRejectedResult).reason;
+  const problem = failed.length === places.length ? message(reason) : `Could not load ${failed.join(', ')}: ${message(reason)}`;
+  return { items, problem };
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [keys, setKeys] = useState<Key[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [servers, setServers] = useState<Listed[]>([]);
+  const [servers, setServers] = useState<Listed<Server>[]>([]);
+  const [serverless, setServerless] = useState<Listed<ServerlessApp>[]>([]);
   const [problems, setProblems] = useState<KeyProblem[]>([]);
   const [prices, setPrices] = useState<Record<string, number>>({});
   const [refreshing, setRefreshing] = useState(false);
   const busy = useRef(false);
   const pricedZones = useRef(new Set<string>());
 
-  const refreshWith = useCallback(async (current: Key[]) => {
-    if (busy.current) return;
-    busy.current = true;
-    setRefreshing(true);
-    try {
-      const results = await Promise.all(current.map(listForKey));
-      const listed = mergeServers(results);
-      setServers(listed);
-      setProblems(results.flatMap((r) => (r.problem ? [{ keyId: r.keyId, message: r.problem }] : [])));
-      // Prices never change while the app runs: fetch each zone once.
-      for (const { server, keyIds } of listed) {
-        const zoneKey = `${keyIds[0]}:${server.zone}`;
-        if (pricedZones.current.has(zoneKey)) continue;
-        pricedZones.current.add(zoneKey);
-        const key = current.find((k) => k.id === keyIds[0])!;
-        clientFor(key)
-          .hourlyPrices(server.zone as Zone)
-          .then((zonePrices) =>
-            setPrices((p) => ({
-              ...p,
-              ...Object.fromEntries(Object.entries(zonePrices).map(([type, price]) => [`${server.zone}/${type}`, price])),
-            })),
-          )
-          .catch(() => pricedZones.current.delete(zoneKey));
-      }
-    } finally {
-      busy.current = false;
-      setRefreshing(false);
+  const loadPrices = useCallback((current: Key[], listed: Listed<Server>[]) => {
+    // Prices never change while the app runs: fetch each zone once.
+    for (const { item, keyIds } of listed) {
+      if (pricedZones.current.has(item.zone)) continue;
+      pricedZones.current.add(item.zone);
+      withKeys(current, keyIds, (client) => client.hourlyPrices(item.zone))
+        .then((zonePrices) =>
+          setPrices((p) => ({
+            ...p,
+            ...Object.fromEntries(Object.entries(zonePrices).map(([type, price]) => [`${item.zone}/${type}`, price])),
+          })),
+        )
+        .catch(() => pricedZones.current.delete(item.zone));
     }
   }, []);
+
+  const refreshWith = useCallback(
+    async (current: Key[]) => {
+      if (busy.current) return;
+      busy.current = true;
+      setRefreshing(true);
+      try {
+        const results = await Promise.all(
+          current.map(async (key) => {
+            const client = clientFor(key);
+            const [instances, apps] = await Promise.all([
+              listAll(ZONES, (zone) => client.listServers(zone), false),
+              listAll(REGIONS, (region) => client.listServerless(region), true),
+            ]);
+            return { key, instances, apps };
+          }),
+        );
+        const listedServers = sortServers(mergeById(results.map((r) => ({ keyId: r.key.id, items: r.instances.items }))));
+        setServers(listedServers);
+        setServerless(
+          mergeById(results.map((r) => ({ keyId: r.key.id, items: r.apps.items }))).sort((a, b) =>
+            a.item.name.localeCompare(b.item.name),
+          ),
+        );
+        setProblems(
+          results.flatMap((r) => [
+            ...(r.instances.problem ? [{ keyId: r.key.id, area: 'instances' as const, message: r.instances.problem }] : []),
+            ...(r.apps.problem ? [{ keyId: r.key.id, area: 'serverless' as const, message: r.apps.problem }] : []),
+          ]),
+        );
+        loadPrices(current, listedServers);
+      } finally {
+        busy.current = false;
+        setRefreshing(false);
+      }
+    },
+    [loadPrices],
+  );
 
   useEffect(() => {
     loadKeys()
@@ -111,7 +165,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // While a server is starting or stopping, keep checking until it settles.
   useEffect(() => {
-    if (!servers.some((l) => isBusy(l.server.state))) return;
+    if (!servers.some((l) => isBusy(l.item.state))) return;
     const timer = setTimeout(() => refreshWith(keys), POLL_MS);
     return () => clearTimeout(timer);
   }, [servers, keys, refreshWith]);
@@ -129,6 +183,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     keys,
     loaded,
     servers,
+    serverless,
     problems,
     prices,
     refreshing,
@@ -140,27 +195,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         keys.filter((k) => k.id === id),
       ),
     async act(listed, action) {
-      // Use the first key that is allowed to: a read-only key next to a full
-      // one for the same server is not a reason to fail.
-      let lastError: unknown;
-      for (const keyId of listed.keyIds) {
-        const key = keys.find((k) => k.id === keyId);
-        if (!key) continue;
-        try {
-          await clientFor(key).act(listed.server.zone, listed.server.id, action);
-          lastError = undefined;
-          break;
-        } catch (error) {
-          lastError = error;
-          if (!(error instanceof ApiError && (error.status === 401 || error.status === 403))) break;
-        }
-      }
-      if (lastError) throw lastError;
+      await withKeys(keys, listed.keyIds, (client) => client.act(listed.item.zone, listed.item.id, action));
       if (action !== 'reboot') {
         const state = action === 'poweroff' ? 'stopping' : 'starting';
-        setServers((all) =>
-          all.map((l) => (l.server.id === listed.server.id ? { ...l, server: { ...l.server, state } } : l)),
-        );
+        setServers((all) => all.map((l) => (l.item.id === listed.item.id ? { ...l, item: { ...l.item, state } } : l)));
       }
       await refreshWith(keys);
     },

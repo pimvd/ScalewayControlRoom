@@ -1,23 +1,23 @@
 // Pure functions behind the screens, kept free of React so they can be tested.
 import type { Consumption, Key, Server } from './types';
 
-// A server as the app lists it, with the keys that can see it. Two keys for
-// the same organization see the same servers; each server is shown once.
-export interface Listed {
-  server: Server;
+// A resource as the app lists it, with the keys that can see it. Two keys
+// for the same organization see the same resources; each is shown once.
+export interface Listed<T = Server> {
+  item: T;
   keyIds: string[];
 }
 
-export function mergeServers(results: { keyId: string; servers: Server[] }[]): Listed[] {
-  const byId = new Map<string, Listed>();
-  for (const { keyId, servers } of results) {
-    for (const server of servers) {
-      const listed = byId.get(server.id);
+export function mergeById<T extends { id: string }>(results: { keyId: string; items: T[] }[]): Listed<T>[] {
+  const byId = new Map<string, Listed<T>>();
+  for (const { keyId, items } of results) {
+    for (const item of items) {
+      const listed = byId.get(item.id);
       if (listed) listed.keyIds.push(keyId);
-      else byId.set(server.id, { server, keyIds: [keyId] });
+      else byId.set(item.id, { item, keyIds: [keyId] });
     }
   }
-  return sortServers([...byId.values()]);
+  return [...byId.values()];
 }
 
 // What is costing money comes first.
@@ -33,7 +33,7 @@ const STATE_ORDER: Record<Server['state'], number> = {
 export function sortServers(list: Listed[]): Listed[] {
   return [...list].sort(
     (a, b) =>
-      STATE_ORDER[a.server.state] - STATE_ORDER[b.server.state] || a.server.name.localeCompare(b.server.name),
+      STATE_ORDER[a.item.state] - STATE_ORDER[b.item.state] || a.item.name.localeCompare(b.item.name),
   );
 }
 
@@ -45,7 +45,7 @@ export type StateFilter = 'all' | 'running' | 'stopped';
 
 export function filterServers(list: Listed[], query: string, state: StateFilter): Listed[] {
   const q = query.trim().toLowerCase();
-  return list.filter(({ server }) => {
+  return list.filter(({ item: server }) => {
     if (state === 'running' && server.state === 'stopped') return false;
     if (state === 'stopped' && server.state !== 'stopped') return false;
     if (!q) return true;

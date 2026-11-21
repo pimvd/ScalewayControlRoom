@@ -15,6 +15,15 @@ export const ZONES = [
 
 export type Zone = (typeof ZONES)[number];
 
+// Regions of Serverless and Cockpit.
+export const REGIONS = ['fr-par', 'nl-ams', 'pl-waw', 'it-mil'] as const;
+
+export type Region = (typeof REGIONS)[number];
+
+export function regionOf(zone: Zone): Region {
+  return zone.slice(0, zone.lastIndexOf('-')) as Region;
+}
+
 export type ServerState = 'running' | 'stopped' | 'stopped in place' | 'starting' | 'stopping' | 'locked';
 
 // poweroff stops the server and releases its hypervisor, which is what stops
@@ -32,6 +41,37 @@ export interface Server {
   tags: string[];
   publicIps: string[];
   createdAt?: string;
+}
+
+export interface ServerlessApp {
+  id: string;
+  name: string;
+  kind: 'container' | 'function';
+  status: string;
+  region: Region;
+  projectId: string;
+  endpoint: string;
+  minScale: number;
+  maxScale: number;
+}
+
+// Where Cockpit keeps a resource's logs. Scaleway labels every log line with
+// the resource's ID, and the instance setup guide asks for the same label.
+export interface LogTarget {
+  projectId: string;
+  region: Region;
+  resourceId: string;
+}
+
+export interface LogLine {
+  time: number; // ms since epoch
+  line: string;
+}
+
+export interface LogResult {
+  // How many log data sources the project has in that region.
+  sources: number;
+  lines: LogLine[];
 }
 
 export interface Consumption {
@@ -65,4 +105,7 @@ export interface ScalewayClient {
   costs(period: string): Promise<MonthlyCosts>;
   // commercial type -> price per hour
   hourlyPrices(zone: Zone): Promise<Record<string, number>>;
+  listServerless(region: Region): Promise<ServerlessApp[]>;
+  // The newest lines of the last `minutes`, newest first.
+  logs(target: LogTarget, minutes: number): Promise<LogResult>;
 }

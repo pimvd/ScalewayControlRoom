@@ -80,7 +80,8 @@ export default function AddKeyScreen() {
     <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
       <Muted style={{ marginBottom: 16 }}>
         Create an IAM application with its own API key in the Scaleway console. Give it only the permission sets
-        you want this app to use: InstancesFullAccess to start and stop, BillingReadOnly for costs.
+        you want this app to use: InstancesFullAccess to start and stop, BillingReadOnly for costs,
+        ContainersReadOnly and FunctionsReadOnly for serverless, ObservabilityReadOnly for logs.
       </Muted>
       <Button title="Open the setup guide" kind="secondary" onPress={() => Linking.openURL(SUPPORT_URL)} />
       {field('Name', label, setLabel, { placeholder: 'Work' })}

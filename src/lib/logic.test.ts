@@ -4,13 +4,14 @@ import { demoClient, resetDemo } from './demo';
 import { validateKey } from './keys';
 import {
   filterServers,
-  mergeServers,
+  mergeById,
+  sortServers,
   recentPeriods,
   sumBy,
   total,
   uniqueOrganizations,
 } from './logic';
-import { money, toServer } from './scaleway';
+import { money, toLogLines, toServer } from './scaleway';
 import type { Key, Server } from './types';
 
 function server(id: string, name: string, state: Server['state'], tags: string[] = []): Server {
@@ -21,6 +22,9 @@ function key(id: string, organizationId: string): Key {
   return { id, label: id, secretKey: 's', organizationId };
 }
 
+const mergeServers = (results: { keyId: string; servers: Server[] }[]) =>
+  sortServers(mergeById(results.map((r) => ({ keyId: r.keyId, items: r.servers }))));
+
 describe('mergeServers', () => {
   it('shows a server two keys can see once, with both keys', () => {
     const shared = server('1', 'web', 'running');
@@ -29,14 +33,14 @@ describe('mergeServers', () => {
       { keyId: 'b', servers: [shared, server('2', 'db', 'running')] },
     ]);
     expect(merged).toHaveLength(2);
-    expect(merged.find((l) => l.server.id === '1')!.keyIds).toEqual(['a', 'b']);
+    expect(merged.find((l) => l.item.id === '1')!.keyIds).toEqual(['a', 'b']);
   });
 
   it('puts running servers first, then by name', () => {
     const merged = mergeServers([
       { keyId: 'a', servers: [server('1', 'b', 'stopped'), server('2', 'z', 'running'), server('3', 'a', 'running')] },
     ]);
-    expect(merged.map((l) => l.server.name)).toEqual(['a', 'z', 'b']);
+    expect(merged.map((l) => l.item.name)).toEqual(['a', 'z', 'b']);
   });
 });
 
@@ -46,14 +50,14 @@ describe('filterServers', () => {
   ]);
 
   it('filters by state', () => {
-    expect(filterServers(list, '', 'running').map((l) => l.server.id)).toEqual(['1']);
-    expect(filterServers(list, '', 'stopped').map((l) => l.server.id)).toEqual(['2']);
+    expect(filterServers(list, '', 'running').map((l) => l.item.id)).toEqual(['1']);
+    expect(filterServers(list, '', 'stopped').map((l) => l.item.id)).toEqual(['2']);
     expect(filterServers(list, '', 'all')).toHaveLength(2);
   });
 
   it('searches names and tags', () => {
-    expect(filterServers(list, 'WEB', 'all').map((l) => l.server.id)).toEqual(['1']);
-    expect(filterServers(list, 'dev', 'all').map((l) => l.server.id)).toEqual(['2']);
+    expect(filterServers(list, 'WEB', 'all').map((l) => l.item.id)).toEqual(['1']);
+    expect(filterServers(list, 'dev', 'all').map((l) => l.item.id)).toEqual(['2']);
   });
 });
 
@@ -99,6 +103,17 @@ describe('toServer', () => {
       creation_date: null,
     });
     expect(s).toMatchObject({ commercialType: 'DEV1-S', publicIps: ['51.15.0.1'], tags: [], createdAt: undefined });
+  });
+});
+
+describe('toLogLines', () => {
+  it('merges Loki streams newest first, with times in milliseconds', () => {
+    const lines = toLogLines([
+      { data: { result: [{ values: [['1700000000000000000', 'a'], ['1700000002000000000', 'c']] }] } },
+      { data: { result: [{ values: [['1700000001000000000', 'b']] }] } },
+    ]);
+    expect(lines.map((l) => l.line)).toEqual(['c', 'b', 'a']);
+    expect(lines[0].time).toBe(1700000002000);
   });
 });
 

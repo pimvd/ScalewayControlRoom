@@ -7,6 +7,10 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Label>Instances</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="server.rack" />
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="serverless">
+        <NativeTabs.Trigger.Label>Serverless</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="bolt" />
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="costs">
         <NativeTabs.Trigger.Label>Costs</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="eurosign.circle" />

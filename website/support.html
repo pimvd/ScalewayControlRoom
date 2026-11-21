@@ -25,6 +25,8 @@
       <ul>
         <li><code>InstancesFullAccess</code> for the projects whose instances you want to start and stop. Use <code>InstancesReadOnly</code> to only look.</li>
         <li><code>BillingReadOnly</code> at organization level, to see costs.</li>
+        <li><code>ContainersReadOnly</code> and <code>FunctionsReadOnly</code>, to list serverless containers and functions.</li>
+        <li><code>ObservabilityReadOnly</code>, to read logs from Cockpit.</li>
       </ul>
       Leave out what you do not want: the app hides what its key may not do.</li>
     <li>Open the application, choose <em>API keys → Generate API key</em>, and copy the <strong>secret key</strong>. It is shown only once.</li>
@@ -33,6 +35,19 @@
   </ol>
 
   <p>Repeat for each organization. When two keys can see the same instance, the app shows it once and uses whichever key is allowed to start or stop it.</p>
+
+  <h2>Logs</h2>
+
+  <p><strong>Serverless containers and functions</strong> send their logs to Cockpit by themselves: everything they write to standard output and standard error. Open the app in the Serverless tab and tap <em>Logs</em>.</p>
+
+  <p><strong>Instances</strong> do not. An agent on the instance has to push the logs to Cockpit; once it does, they show up in the app. To set it up:</p>
+  <ol>
+    <li>In the console, open <em>Cockpit → Data sources</em> and create a custom data source of type <em>Logs</em> in the instance's region. Copy its URL.</li>
+    <li>Create a separate API key that may push to Cockpit (an IAM application with <code>ObservabilityFullAccess</code>). Do not reuse the key in the app.</li>
+    <li>Install <a href="https://grafana.com/docs/alloy/latest/set-up/install/linux/">Grafana Alloy</a> on the instance.</li>
+    <li>In the app, open the instance, tap <em>Logs</em> and then <em>Share configuration</em>. Put it in <code>/etc/alloy/config.alloy</code>, fill in the data source URL and the secret key, and run <code>systemctl restart alloy</code>.</li>
+  </ol>
+  <p>The configuration labels every line with the instance's ID (<code>resource_id</code>), which is how the app finds them. Logs you push yourself are billed by Scaleway as Cockpit custom data.</p>
 
   <h2>Frequently asked questions</h2>
 

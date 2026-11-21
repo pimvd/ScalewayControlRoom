@@ -22,9 +22,11 @@ contact name, phone and email, and paste the block below into **Notes**.
 <!-- BEGIN REVIEW NOTES -->
 The app controls servers at the cloud provider Scaleway through the user's own
 Scaleway API key. You do not need a Scaleway account to review it: on the first
-screen tap "Try the demo" (also in Settings). The demo shows made-up instances
-and costs, and starting, stopping and rebooting work on them as they would on
-real servers.
+screen tap "Try the demo" (also in Settings). The demo shows made-up instances,
+serverless apps, logs and costs. Starting, stopping and rebooting work on the
+instances as they would on real servers. Open an instance and tap Logs to see
+the guide for instances that send no logs; open a serverless app and tap Logs
+to see its log lines.
 
 The app has no server of its own and no account system. API keys are stored in
 the iOS keychain and sent only to api.scaleway.com.

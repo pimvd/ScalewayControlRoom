@@ -18,8 +18,12 @@ user's API keys, which live in the keychain (`expo-secure-store`).
 
 ## Layout
 
-- `src/app/` screens (expo-router): tabs for Instances, Costs, Settings;
-  `instance/[id]` detail; `add-key` modal.
+- `src/app/` screens (expo-router): tabs for Instances, Serverless, Costs,
+  Settings; `instance/[id]` and `serverless/[id]` details; `logs` (both kinds);
+  `add-key` modal; `demo` (the `controlroom://demo` link that turns the demo on,
+  used for screenshots).
+- `src/components/instance-logs-setup.tsx` the guide shown when an instance has
+  no logs, with a ready Grafana Alloy config.
 - `src/lib/types.ts` domain types and the `ScalewayClient` interface.
 - `src/lib/scaleway.ts` the real client; `src/lib/demo.ts` the demo client and
   data. The demo key is an ordinary key whose client is fake, so there is no
@@ -30,8 +34,14 @@ user's API keys, which live in the keychain (`expo-secure-store`).
   polling while a server is starting/stopping, actions.
 - `src/lib/pro.ts` the single Pro gate (`usePro`). Everything is unlocked until
   the subscription ships.
-- `AppStore/`, `scripts/`, `MANUAL_METADATA.md`, `website/`: the store pipeline,
-  modelled on FreeCubeSolver's.
+- `AppStore/`, `scripts/`, `MANUAL_METADATA.md`: the store pipeline, modelled on
+  FreeCubeSolver's.
+- `website/`: marketing page, support (also the key setup guide) and privacy.
+  The Website workflow uploads it with the icon and the App Store screenshots
+  to `vandijkcloud.nl/controlroom/` over FTP.
+- Workflows: `ci.yml` (every push), `release.yml` (TestFlight + metadata,
+  manual), `screenshots.yml` (simulator screenshots, manual, commits them),
+  `website.yml` (on website changes and after Screenshots).
 
 ## Behaviour worth knowing
 
@@ -39,6 +49,13 @@ user's API keys, which live in the keychain (`expo-secure-store`).
   key that sees it until one is allowed (401/403 moves on to the next).
 - Costs are fetched once per organization ID, so two keys for one organization
   do not double count.
+- Logs: the app lists the project's Cockpit log data sources in the region and
+  queries each one's Loki with `{resource_id="<id>"}`, authenticated with the
+  IAM secret key (`X-Auth-Token`). Scaleway labels serverless logs that way; the
+  instance guide's Alloy config adds the same label.
+- Serverless: containers (v1) and functions (v1beta1) carry no project; it comes
+  from their namespace. Functions can only be listed per namespace. A key that
+  may not see serverless (401/403) is left out quietly.
 - Stop uses `poweroff`, which releases the hypervisor and stops compute billing.
   `stop_in_place` is deliberately not offered.
 - Store URLs (privacy, support, terms) come from `AppStore/app.json` through

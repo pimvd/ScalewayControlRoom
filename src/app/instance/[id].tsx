@@ -1,4 +1,4 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, ScrollView, View } from 'react-native';
 
@@ -20,7 +20,7 @@ export default function InstanceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const store = useStore();
   const [pending, setPending] = useState<ServerAction | null>(null);
-  const listed = store.servers.find((l) => l.server.id === id);
+  const listed = store.servers.find((l) => l.item.id === id);
 
   if (!listed) {
     return (
@@ -29,7 +29,7 @@ export default function InstanceScreen() {
       </View>
     );
   }
-  const { server } = listed;
+  const { item: server } = listed;
   const price = store.prices[`${server.zone}/${server.commercialType}`];
 
   const run = async (action: ServerAction) => {
@@ -67,6 +67,14 @@ export default function InstanceScreen() {
         {server.tags.length ? <Row label="Tags" value={server.tags.join(', ')} /> : null}
         <Row label="Project" value={server.project} />
         <Row label="Seen by" value={keyLabels} last />
+      </Section>
+
+      <Section>
+        <Row
+          label="Logs"
+          onPress={() => router.push({ pathname: '/logs', params: { kind: 'instance', id: server.id } })}
+          last
+        />
       </Section>
 
       {server.state === 'stopped' || server.state === 'stopped in place' ? (

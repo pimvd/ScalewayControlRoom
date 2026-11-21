@@ -5,10 +5,13 @@ them into `fastlane/screenshots/<locale>/`, from where the release workflow
 hands them to `fastlane deliver`. With none committed, the workflow leaves the
 screenshots in App Store Connect alone.
 
-Put them in `AppStore/screenshots/en-US/`, named so they sort in the order
-they should appear: `01-instances.png`, `02-instance.png`, `03-costs.png`.
+The **Screenshots** workflow takes them: it builds the app for the iOS
+simulator, turns on the demo through the `controlroom://demo` link, opens each
+screen by deep link (`scripts/screenshots.sh`) and commits the pictures to
+`AppStore/screenshots/en-US/`. They sort in the order they appear. The website
+deploy shows them on the marketing page too.
 
-Take them in the demo (Settings → Try the demo), so no real server names or
+Taking them by hand works as well: use the demo, so no real server names or
 costs end up in the listing.
 
 ## Size

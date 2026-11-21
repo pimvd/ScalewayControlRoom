@@ -1,4 +1,4 @@
-import type { Key, MonthlyCosts, ScalewayClient, Server, ServerAction } from './types';
+import type { Key, LogLine, MonthlyCosts, ScalewayClient, Server, ServerAction, ServerlessApp } from './types';
 
 // The demo key lets App Review, screenshots and curious users try the app
 // without a Scaleway account. Everything here is made up.
@@ -54,6 +54,49 @@ const DEMO_COSTS: [category: string, product: string, project: string, amount: n
   ['Observability', 'Cockpit', 'webshop', 1.2],
 ];
 
+function app(id: string, name: string, kind: ServerlessApp['kind'], projectId: string, maxScale: number): ServerlessApp {
+  return {
+    id,
+    name,
+    kind,
+    status: 'ready',
+    region: 'fr-par',
+    projectId,
+    endpoint: `${name}-demo.functions.fnc.fr-par.scw.cloud`,
+    minScale: 0,
+    maxScale,
+  };
+}
+
+const DEMO_APPS: ServerlessApp[] = [
+  app('demo-c1', 'checkout-api', 'container', 'webshop', 5),
+  app('demo-c2', 'image-resizer', 'container', 'webshop', 10),
+  app('demo-f1', 'stripe-webhook', 'function', 'webshop', 3),
+  app('demo-f2', 'nightly-report', 'function', 'tooling', 1),
+];
+
+const DEMO_LOG_LINES = [
+  'GET /api/cart 200 18ms',
+  'POST /api/checkout 201 142ms',
+  'GET /api/cart 200 12ms',
+  'payment confirmed for order 10482',
+  'GET /healthz 200 1ms',
+  'POST /api/checkout 402 96ms: card declined',
+  'GET /api/products?page=2 200 31ms',
+  'cache miss for product 8812, loading from database',
+];
+
+// Serverless apps log; the demo instances do not, so their logs screen shows
+// how to set that up.
+function demoLogs(resourceId: string): LogLine[] {
+  if (!DEMO_APPS.some((a) => a.id === resourceId)) return [];
+  const now = Date.now();
+  return Array.from({ length: 40 }, (_, i) => ({
+    time: now - i * 47_000,
+    line: DEMO_LOG_LINES[i % DEMO_LOG_LINES.length],
+  }));
+}
+
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -101,5 +144,15 @@ export const demoClient: ScalewayClient = {
 
   async hourlyPrices() {
     return DEMO_PRICES;
+  },
+
+  async listServerless(region) {
+    await wait(300);
+    return DEMO_APPS.filter((a) => a.region === region);
+  },
+
+  async logs(target) {
+    await wait(300);
+    return { sources: 1, lines: demoLogs(target.resourceId) };
   },
 };
