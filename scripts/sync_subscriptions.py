@@ -50,8 +50,10 @@ class Sync:
         for product in self.config["products"]:
             subscription = self.subscription(group, product)
             self.localization(subscription, product)
-            self.price(subscription, product)
+            # Availability first: App Store Connect refuses a price in a
+            # territory where the subscription is not available.
             self.availability(subscription)
+            self.price(subscription, product)
             screenshot = self.folder / product.get("review_screenshot", "")
             if product.get("review_screenshot") and screenshot.is_file():
                 self.screenshot(subscription, screenshot)

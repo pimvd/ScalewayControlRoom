@@ -88,6 +88,9 @@ class FakeAppStoreConnect:
                              for t in TERRITORIES]}
         if method == "POST" and path == "/v1/subscriptionPrices":
             key = (rel["subscription"]["data"]["id"], rel["territory"]["data"]["id"])
+            if key[0] not in self.available:
+                # What App Store Connect answers: ENTITY_ERROR.RELATIONSHIP.UNSUPPORTED_TERRITORY.
+                raise SyncError(f"409 territory {key[1]} is not supported for subscription {key[0]}")
             self.prices[key] = rel["subscriptionPricePoint"]["data"]["id"]
             return {}
         if method == "GET" and path.endswith("/subscriptionAvailability"):
