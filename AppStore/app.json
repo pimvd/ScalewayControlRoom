@@ -1,0 +1,15 @@
+{
+  "bundle_id": "com.pvd.controlroom",
+  "sku": "controlroom",
+  "primary_locale": "en-US",
+  "primary_category": "DEVELOPER_TOOLS",
+  "secondary_category": "UTILITIES",
+  "copyright": "2026 Pim van Dijk",
+  "age_rating": "4+",
+  "privacy_url": "https://vandijkcloud.nl/controlroom/privacy.html",
+  "support_url": "https://vandijkcloud.nl/controlroom/support.html",
+  "terms_url": "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/",
+  "marketing_url": "",
+  "app_privacy": "Data Not Collected",
+  "locales": ["en-US"]
+}

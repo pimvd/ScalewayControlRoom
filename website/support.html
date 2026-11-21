@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scaleway ControlRoom — Support</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #222; }
+    code { background: #f2f2f2; padding: 1px 4px; border-radius: 4px; }
+    @media (prefers-color-scheme: dark) { body { background: #111; color: #ddd; } a { color: #8ab4ff; } code { background: #222; } }
+  </style>
+</head>
+<body>
+  <h1>Scaleway ControlRoom — Support</h1>
+
+  <p>ControlRoom lists your Scaleway instances, starts and stops them, and shows what your organization costs this month. It talks only to Scaleway's API, with an API key you create.</p>
+
+  <h2>Setting up an API key</h2>
+
+  <p>Use a key that belongs to an IAM application made for ControlRoom, not your personal key. That way the app can do only what you allow, and you can revoke it at any time without touching anything else.</p>
+
+  <ol>
+    <li>In the <a href="https://console.scaleway.com/">Scaleway console</a>, open <em>IAM → Applications</em> and create an application, for example <code>controlroom</code>.</li>
+    <li>Open <em>IAM → Policies</em> and create a policy for that application, with these permission sets:
+      <ul>
+        <li><code>InstancesFullAccess</code> for the projects whose instances you want to start and stop. Use <code>InstancesReadOnly</code> to only look.</li>
+        <li><code>BillingReadOnly</code> at organization level, to see costs.</li>
+      </ul>
+      Leave out what you do not want: the app hides what its key may not do.</li>
+    <li>Open the application, choose <em>API keys → Generate API key</em>, and copy the <strong>secret key</strong>. It is shown only once.</li>
+    <li>Copy your <strong>organization ID</strong> from <em>Organization → Settings</em>.</li>
+    <li>In ControlRoom, tap <em>Add API key</em>, give it a name and paste both. Copying on a Mac and pasting on the iPhone works through the shared clipboard.</li>
+  </ol>
+
+  <p>Repeat for each organization. When two keys can see the same instance, the app shows it once and uses whichever key is allowed to start or stop it.</p>
+
+  <h2>Frequently asked questions</h2>
+
+  <p><strong>Does stopping an instance stop all of its costs?</strong><br>
+  It stops the compute billing. Volumes and flexible IPs stay and are still billed.</p>
+
+  <p><strong>Why do my costs differ from my invoice?</strong><br>
+  The figures come from Scaleway billing and exclude VAT. Scaleway updates them a few times a day, so the last hours may be missing. The invoice is the final word.</p>
+
+  <p><strong>A key shows an error.</strong><br>
+  Scaleway rejected it: it may have expired, been deleted, or lack a permission. Check the policy of its application in the console. The other keys keep working.</p>
+
+  <p><strong>How do I remove a key?</strong><br>
+  Tap it in <em>Settings</em>. That deletes it from your iPhone; to make it useless everywhere, also delete it in the Scaleway console.</p>
+
+  <p><strong>Can I try the app without a Scaleway account?</strong><br>
+  Yes: tap <em>Try the demo</em>. It shows made-up instances and costs, and you can start and stop them.</p>
+
+  <p><strong>Is this an official Scaleway app?</strong><br>
+  No. ControlRoom is an independent app. It is not made, endorsed or supported by Scaleway, so please send questions about the app to the address below, not to Scaleway.</p>
+
+  <h2>Contact</h2>
+
+  <p>Anything else? Email <a href="mailto:pim@vandijkcloud.nl">pim@vandijkcloud.nl</a> — please mention your app version (shown in <em>Settings</em>).</p>
+
+  <p><a href="privacy.html">Privacy policy</a></p>
+</body>
+</html>
