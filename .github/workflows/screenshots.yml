@@ -23,6 +23,22 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      # A fresh simulator takes minutes to boot the first time: start it now,
+      # so it boots while the app compiles.
+      - name: Start booting the simulator
+        run: |
+          udid=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          for runtime in sorted((k for k in devices if "iOS" in k), reverse=True):
+              for d in sorted(devices[runtime], key=lambda d: d["name"], reverse=True):
+                  if d["name"].endswith("Pro Max"):
+                      print(d["udid"]); sys.exit()
+          sys.exit("No Pro Max simulator")
+          ')
+          echo "SIMULATOR_UDID=$udid" >> "$GITHUB_ENV"
+          xcrun simctl boot "$udid"
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22

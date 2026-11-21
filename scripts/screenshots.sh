@@ -10,7 +10,8 @@ app=$(find build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app
 [ -n "$app" ] || { echo "No simulator build in ./build"; exit 1; }
 
 # The newest Pro Max: its screen is the 6.9" size App Store Connect wants.
-udid=$(xcrun simctl list devices available --json | python3 -c '
+# The workflow may have picked and booted it already, during the build.
+udid=${SIMULATOR_UDID:-$(xcrun simctl list devices available --json | python3 -c '
 import json, sys
 devices = json.load(sys.stdin)["devices"]
 for runtime in sorted((k for k in devices if "iOS" in k), reverse=True):
@@ -18,10 +19,10 @@ for runtime in sorted((k for k in devices if "iOS" in k), reverse=True):
         if d["name"].endswith("Pro Max"):
             print(d["udid"]); sys.exit()
 sys.exit("No Pro Max simulator")
-')
+')}
 echo "Using simulator $udid"
 
-xcrun simctl boot "$udid"
+xcrun simctl boot "$udid" 2>/dev/null || true  # already booting is fine
 xcrun simctl bootstatus "$udid" -b
 xcrun simctl ui "$udid" appearance light
 xcrun simctl status_bar "$udid" override --time 9:41 --dataNetwork wifi --wifiMode active --wifiBars 3 \
