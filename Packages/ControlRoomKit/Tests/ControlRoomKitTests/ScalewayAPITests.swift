@@ -57,6 +57,20 @@ final class ScalewayAPITests: XCTestCase {
         }
     }
 
+    func testARegionWithoutTheProductIsRecognised() async {
+        let transport = FakeTransport()
+        transport.responses["/containers/v1/regions/it-mil/namespaces"] = (404, #"{"message": "unknown service"}"#)
+        do {
+            _ = try await ScalewayAPI(key: key, transport: transport).listServerless(region: .itMil)
+            XCTFail("expected an error")
+        } catch let error as APIError {
+            XCTAssertTrue(error.isUnknownService)
+            XCTAssertFalse(error.isForbidden)
+        } catch {
+            XCTFail("unexpected \(error)")
+        }
+    }
+
     func testActionsPostTheAction() async throws {
         let transport = FakeTransport()
         transport.responses["/instance/v1/zones/fr-par-1/servers/1/action"] = (202, #"{"task": {}}"#)

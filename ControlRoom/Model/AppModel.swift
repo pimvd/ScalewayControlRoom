@@ -139,7 +139,11 @@ final class AppModel {
             switch result {
             case .success(let found): items += found
             case .failure(let error):
-                if !(quietForbidden && (error as? APIError)?.isForbidden == true) { failed.append((place, error)) }
+                let apiError = error as? APIError
+                // A region without the product, or a key that may not see it
+                // (where asked), is simply empty.
+                if apiError?.isUnknownService == true || (quietForbidden && apiError?.isForbidden == true) { continue }
+                failed.append((place, error))
             }
         }
         guard let first = failed.first else { return (items, nil) }

@@ -208,6 +208,9 @@ public struct APIError: Error, LocalizedError, Sendable {
 
     /// The key may not do this: try another key, or leave the feature out.
     public var isForbidden: Bool { status == 401 || status == 403 }
+    /// Scaleway does not offer the product in this region or zone (it answers
+    /// "unknown service"): nothing to list there, and not worth a warning.
+    public var isUnknownService: Bool { message.lowercased().contains("unknown service") }
     public var errorDescription: String? { message }
 }
 
