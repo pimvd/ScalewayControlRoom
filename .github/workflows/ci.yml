@@ -34,8 +34,11 @@ jobs:
       - name: Expo dependency versions
         run: npx expo install --check
 
-      - name: App Store metadata
-        run: python3 scripts/validate_metadata.py
+      - name: App Store metadata and subscriptions
+        run: |
+          python3 scripts/validate_metadata.py
+          python3 scripts/validate_subscriptions.py
+          python3 -m unittest discover -s scripts/tests -t .
 
   # Proves the native iOS project still compiles. Unsigned, for the simulator,
   # so it needs no Apple credentials.

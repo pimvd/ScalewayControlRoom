@@ -59,9 +59,31 @@ if the description loses that sentence.
 
 ## 5. Agreements, pricing and availability
 
-The app is free to download. The Pro subscription (not built yet) will need the
-**Paid Apps agreement** under Business → Agreements, with banking and tax
-filled in. Available worldwide.
+The app is free to download, available worldwide. The Paid Apps agreement is in
+place.
+
+## 5a. Pro subscriptions
+
+The release workflow's `push_subscriptions` switch creates and updates them
+from `AppStore/subscriptions.json` (`scripts/sync_subscriptions.py`): the
+"ControlRoom Pro" group, the monthly and yearly subscription, their names and
+descriptions, the price in every territory, availability and the review
+screenshot. The product IDs must match `PRO_PRODUCT_IDS` in `src/lib/pro.ts`;
+CI checks that.
+
+By hand, once:
+
+- **Free trial:** each subscription → Subscription Prices → Introductory
+  Offers → Free, one week, all territories.
+- **Review screenshot:** a screenshot of the Pro screen in the app, at
+  `AppStore/subscriptions/review.png`. Until it exists the sync skips it, and
+  App Store Connect will not let the subscriptions be submitted.
+- **First submission:** new subscriptions go to review together with an app
+  version. On the version page, under In-App Purchases and Subscriptions, add
+  both before submitting.
+- **Description:** once Pro is for sale, the store description must say which
+  features need it, the subscription lengths and prices, and link the terms of
+  use.
 
 ## 6. Screenshots
 

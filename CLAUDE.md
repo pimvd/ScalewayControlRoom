@@ -39,8 +39,12 @@ user's API keys, which live in the keychain (`expo-secure-store`).
 - `website/`: marketing page, support (also the key setup guide) and privacy.
   The Website workflow uploads it with the icon and the App Store screenshots
   to `vandijkcloud.nl/Scaleway-ControlRoom/` over FTP.
-- Workflows: `ci.yml` (every push), `release.yml` (TestFlight + metadata,
-  manual), `screenshots.yml` (simulator screenshots, manual, commits them),
+- Subscriptions: `AppStore/subscriptions.json` → `scripts/sync_subscriptions.py`
+  (App Store Connect client in `scripts/asc.py`, tests in `scripts/tests/`).
+  Product IDs live in `PRO_PRODUCT_IDS` (`src/lib/pro.ts`) and
+  `scripts/validate_subscriptions.py` keeps both in step.
+- Workflows: `ci.yml` (every push), `release.yml` (TestFlight, metadata and
+  subscriptions, manual), `screenshots.yml` (simulator screenshots, manual, commits them),
   `website.yml` (on website changes and after Screenshots).
 
 ## Behaviour worth knowing

@@ -23,6 +23,10 @@ on:
         description: Push the store text and screenshots
         type: boolean
         default: true
+      push_subscriptions:
+        description: Create or update the Pro subscriptions (AppStore/subscriptions.json)
+        type: boolean
+        default: false
 
 concurrency:
   group: release
@@ -53,13 +57,15 @@ jobs:
             echo "::error::Missing repository secret(s):$missing"
             exit 1
           fi
-          if [ "${{ inputs.upload_build }}" != "true" ] && [ "${{ inputs.push_metadata }}" != "true" ]; then
-            echo "::error::Nothing to do: turn on upload_build or push_metadata."
+          if [ "${{ inputs.upload_build }}" != "true" ] && [ "${{ inputs.push_metadata }}" != "true" ] && [ "${{ inputs.push_subscriptions }}" != "true" ]; then
+            echo "::error::Nothing to do: turn on upload_build, push_metadata or push_subscriptions."
             exit 1
           fi
 
       - name: Validate App Store metadata
-        run: python3 scripts/validate_metadata.py
+        run: |
+          python3 scripts/validate_metadata.py
+          python3 scripts/validate_subscriptions.py
 
       - name: Write the API key
         env:
@@ -190,6 +196,18 @@ jobs:
             echo "::error::deliver failed. A 'No data' crash in fetch_app_store_review_detail means App Store Connect has no App Review Information for this version yet. Fill it in first; see MANUAL_METADATA.md step 1."
             exit 1
           }
+
+      - name: Sync the Pro subscriptions
+        if: inputs.push_subscriptions
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          # A virtual environment, because the runner's Homebrew Python refuses
+          # package installs into itself (PEP 668).
+          python3 -m venv "$RUNNER_TEMP/asc-venv"
+          "$RUNNER_TEMP/asc-venv/bin/pip" install --quiet cryptography
+          "$RUNNER_TEMP/asc-venv/bin/python" scripts/sync_subscriptions.py
 
       - name: Remove the API key
         if: always()
