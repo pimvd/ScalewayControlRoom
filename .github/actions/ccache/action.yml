@@ -1,0 +1,34 @@
+# Caches compiled C, C++ and Objective-C between runs with ccache, so an iOS
+# build only recompiles what changed. Swift is not cached. app.json turns
+# ccache on for the build (expo-build-properties: ios.ccacheEnabled), and
+# React Native's Podfile hooks route the compiler through it when ccache is on
+# PATH. Use before `expo prebuild`.
+name: ccache
+description: Install ccache and restore and save its cache
+inputs:
+  key:
+    description: Which build the cache is for (simulator and device builds compile differently)
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Install ccache
+      shell: bash
+      run: |
+        brew install --quiet ccache
+        {
+          echo "CCACHE_DIR=$RUNNER_TEMP/ccache"
+          # Paths under the checkout are hashed relative to it.
+          echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE"
+          echo "CCACHE_MAXSIZE=3G"
+        } >> "$GITHUB_ENV"
+
+    - uses: actions/cache@v6
+      with:
+        path: ${{ runner.temp }}/ccache
+        # A new entry every run; the newest one for the same dependencies is
+        # restored, or else the newest one at all.
+        key: ccache-${{ inputs.key }}-${{ hashFiles('package-lock.json') }}-${{ github.run_id }}
+        restore-keys: |
+          ccache-${{ inputs.key }}-${{ hashFiles('package-lock.json') }}-
+          ccache-${{ inputs.key }}-

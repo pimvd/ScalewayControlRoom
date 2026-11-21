@@ -60,6 +60,10 @@ jobs:
 
       - run: npm ci
 
+      - uses: ./.github/actions/ccache
+        with:
+          key: simulator
+
       - name: Generate the iOS project
         run: npx expo prebuild --platform ios --clean
 
@@ -73,9 +77,11 @@ jobs:
             -configuration Release \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             -quiet \
             2>&1 | tee "$RUNNER_TEMP/build.log"
+          ccache --show-stats
         shell: bash -o pipefail {0}
 
       - name: Upload the build log

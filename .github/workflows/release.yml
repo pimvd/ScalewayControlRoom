@@ -105,6 +105,11 @@ jobs:
           npx tsc --noEmit
           npm test
 
+      - uses: ./.github/actions/ccache
+        if: inputs.upload_build
+        with:
+          key: device
+
       - name: Generate the iOS project
         if: inputs.upload_build
         run: |
