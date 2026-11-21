@@ -4,7 +4,7 @@
 # Writes AppStore/screenshots/en-US/*.png at 1320 x 2868 (iPhone 6.9").
 set -euo pipefail
 
-bundle=com.pvd.controlroom
+bundle=com.pvd.scwcontrolroom
 out=AppStore/screenshots/en-US
 app=$(find build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -1)
 [ -n "$app" ] || { echo "No simulator build in ./build"; exit 1; }

@@ -6,7 +6,7 @@
   },
   "products": [
     {
-      "product_id": "com.pvd.controlroom.pro.monthly",
+      "product_id": "com.pvd.scwcontrolroom.pro.monthly",
       "reference_name": "Pro monthly",
       "period": "ONE_MONTH",
       "base_price": "1.99",
@@ -16,7 +16,7 @@
       "review_screenshot": "subscriptions/review.png"
     },
     {
-      "product_id": "com.pvd.controlroom.pro.yearly",
+      "product_id": "com.pvd.scwcontrolroom.pro.yearly",
       "reference_name": "Pro yearly",
       "period": "ONE_YEAR",
       "base_price": "19.99",

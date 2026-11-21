@@ -11,4 +11,4 @@ export const FREE_KEYS = 1;
 // The subscriptions the app sells. AppStore/subscriptions.json configures the
 // same IDs in App Store Connect; scripts/validate_subscriptions.py checks both
 // lists match.
-export const PRO_PRODUCT_IDS = ['com.pvd.controlroom.pro.monthly', 'com.pvd.controlroom.pro.yearly'];
+export const PRO_PRODUCT_IDS = ['com.pvd.scwcontrolroom.pro.monthly', 'com.pvd.scwcontrolroom.pro.yearly'];

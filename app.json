@@ -8,7 +8,7 @@
     "scheme": "controlroom",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "com.pvd.controlroom",
+      "bundleIdentifier": "com.pvd.scwcontrolroom",
       "appleTeamId": "CU24N2K7KY",
       "supportsTablet": false,
       "config": {
