@@ -21,9 +21,7 @@ LIMITS = {
 KEYWORDS_MAX_BYTES = 100
 REQUIRED = ["name", "subtitle", "description", "keywords", "promotional_text", "release_notes"]
 APP_REQUIRED = ["bundle_id", "primary_locale", "primary_category", "privacy_url", "support_url", "terms_url", "locales"]
-# Optional: App Review contact details can live here instead of being typed into
-# App Store Connect. All or nothing, because a half-filled set is worse than none.
-REVIEW_REQUIRED = ["first_name", "last_name", "phone_number", "email_address"]
+REVIEW_NOTES_MAX = 4000  # App Review Information → Notes
 # "Control Center" is Apple's; App Review rejects names that echo its features.
 FORBIDDEN = re.compile(r"control\s+center", re.IGNORECASE)
 # The app uses Scaleway's name, so the listing has to say it is not Scaleway's.
@@ -37,11 +35,15 @@ def main() -> int:
         if not app.get(key):
             problems.append(f"app.json: missing {key}")
 
-    review = app.get("review") or {}
-    if review:
-        for key in REVIEW_REQUIRED:
-            if not str(review.get(key, "")).strip():
-                problems.append(f"app.json: review.{key} is empty; fill it or drop the review block")
+    # The review notes, pushed with the metadata.
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from metadata_to_fastlane import review_notes
+    try:
+        notes = review_notes()
+        if not notes or len(notes) > REVIEW_NOTES_MAX:
+            problems.append(f"MANUAL_METADATA.md: review notes have {len(notes)} characters (1-{REVIEW_NOTES_MAX})")
+    except ValueError:
+        problems.append("MANUAL_METADATA.md: the BEGIN/END REVIEW NOTES markers are missing")
 
     files = {p.stem: p for p in sorted((ROOT / "metadata").glob("*.json"))}
     for locale in app.get("locales", []):

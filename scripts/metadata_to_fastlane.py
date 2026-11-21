@@ -31,10 +31,16 @@ SHARED_PER_LOCALE = {
     "support_url": "support_url.txt",
     "marketing_url": "marketing_url.txt",
 }
-# app.json "review" key -> fastlane review_information file name. Supplying these
-# also works around a deliver crash: it reads the App Review details back
-# unconditionally, and App Store Connect has none until something writes them.
-REVIEW_FILES = ["first_name", "last_name", "phone_number", "email_address", "notes"]
+# The App Review notes live in MANUAL_METADATA.md between these markers. The
+# contact details are typed into App Store Connect: this repository is public.
+NOTES_FILE = REPO / "MANUAL_METADATA.md"
+NOTES_MARKERS = ("<!-- BEGIN REVIEW NOTES -->", "<!-- END REVIEW NOTES -->")
+
+
+def review_notes() -> str:
+    text = NOTES_FILE.read_text(encoding="utf-8")
+    start, end = (text.index(marker) for marker in NOTES_MARKERS)
+    return text[start + len(NOTES_MARKERS[0]):end].strip()
 # app.json key -> fastlane file name (top level)
 TOP_LEVEL = {
     "copyright": "copyright.txt",
@@ -72,13 +78,9 @@ def main() -> int:
     for key, filename in TOP_LEVEL.items():
         if app.get(key):
             (output / filename).write_text(str(app[key]) + "\n", encoding="utf-8")
-    review = app.get("review") or {}
-    if review:
-        folder = output / "review_information"
-        folder.mkdir(exist_ok=True)
-        for key in REVIEW_FILES:
-            if review.get(key):
-                (folder / f"{key}.txt").write_text(str(review[key]) + "\n", encoding="utf-8")
+    folder = output / "review_information"
+    folder.mkdir(exist_ok=True)
+    (folder / "notes.txt").write_text(review_notes() + "\n", encoding="utf-8")
     for locale in app["locales"]:
         data = json.loads((SOURCE / "metadata" / f"{locale}.json").read_text(encoding="utf-8"))
         folder = output / locale

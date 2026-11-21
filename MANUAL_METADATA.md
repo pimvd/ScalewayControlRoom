@@ -17,33 +17,24 @@ change `name` in `AppStore/metadata/en-US.json` and `app.json` to match.
 
 `deliver` reads the App Review details back whether or not it has anything to
 write there, and crashes with `No data` when App Store Connect has none. Fill in
-contact name, phone and email, and paste the block below into **Notes**.
+contact name, phone and email, and turn **Sign-in required** off. The notes
+below are pushed by the release workflow (`push_metadata`), so do not type them
+in: edit them here.
 
 <!-- BEGIN REVIEW NOTES -->
-The app controls servers at the cloud provider Scaleway through the user's own
-Scaleway API key. You do not need a Scaleway account to review it: on the first
-screen tap "Try the demo" (also in Settings). The demo shows made-up instances,
-serverless apps, logs and costs. Starting, stopping and rebooting work on the
-instances as they would on real servers. Open an instance and tap Logs to see
-the guide for instances that send no logs; open a serverless app and tap Logs
-to see its log lines.
+The app controls servers at the cloud provider Scaleway through the user's own Scaleway API key. You do not need a Scaleway account to review it: on the first screen tap "Try the demo" (also in Settings). The demo shows made-up instances, serverless apps, logs and costs, and nothing is sent anywhere.
 
-The app has no server of its own and no account system. API keys are stored in
-the iOS keychain and sent only to api.scaleway.com.
+- Instances: tap one to see its details. Start, Stop and Reboot work on the demo instances as they would on real servers.
+- Logs: open a serverless app and tap Logs to see its log lines. Open an instance and tap Logs to see the guide for instances that send no logs.
+- Costs: this month's costs, by category and project.
 
-ControlRoom is an independent app, not made or endorsed by Scaleway. It uses
-the name only to say which service it works with.
-Pro is an auto-renewing subscription (monthly or yearly). While the demo is the
-only key, every Pro feature is open so the whole app can be reviewed. To test
-the purchase itself, open Settings → Get Pro: it shows both subscriptions with
-their price, Restore purchases, and links to the Terms of Use and Privacy
-Policy. Subscription status is checked with StoreKit on the device.
+Pro is an auto-renewing subscription, monthly or yearly. While the demo is the only key, every Pro feature is open, so the whole app can be reviewed. To test the purchase, open Settings > Get Pro: it shows both subscriptions with their price, Restore purchases, and links to the Terms of Use and Privacy Policy. The subscription status is checked with StoreKit on the device.
+
+The app has no server of its own and no account system. API keys are stored in the iOS keychain and sent only to api.scaleway.com.
+
+ControlRoom is an independent app, not made or endorsed by Scaleway. It uses the name only to say which service it works with.
 <!-- END REVIEW NOTES -->
 
-These details can live in the repository instead: add a `review` block to
-`AppStore/app.json` with `first_name`, `last_name`, `phone_number`,
-`email_address` and `notes`. `scripts/validate_metadata.py` insists it is
-complete.
 
 ## 2. App Privacy
 
