@@ -81,7 +81,10 @@ Swift package for everything that is not UI.
   `resource_id` is the run), so `CockpitTarget.label` says which to query. A
   key that may not see serverless (401/403) is left out quietly.
 - Other: every product in `Products.all`, in every region or zone (~170
-  requests per key), only when the tab is shown or pulled. Scaleway answers
+  requests per key, ~9 s), the first time the tab is shown, when the keys
+  change, or when pulled. The listing runs in its own task: opening a resource
+  cancels the view's task, and a cancelled listing would replace the list
+  with the part that had loaded. Scaleway answers
   bursts with 429: `send` retries, `listResources` keeps 6 in flight. Object
   Storage is missing: buckets need the S3 API and an access key.
 - Stop uses `poweroff`, which releases the hypervisor and stops compute

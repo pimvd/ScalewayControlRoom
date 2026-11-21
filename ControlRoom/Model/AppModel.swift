@@ -62,9 +62,24 @@ final class AppModel {
         }
     }
 
+    /// The keys the resources were last listed for.
+    private var resourcesListedFor: [String]?
+
+    /// Lists every other resource the first time the Other tab is shown, and
+    /// again when the keys change; pulling the list refreshes it.
+    func loadResourcesIfNeeded() async {
+        if resourcesListedFor != keys.map(\.id) { await refreshResources() }
+    }
+
     /// Lists every other resource of every key: some 170 requests per key,
-    /// so only when the Other tab is shown or pulled, not with every refresh.
+    /// so not with every refresh. In a task of its own: opening a resource or
+    /// leaving the tab cancels the view's task, and a cancelled listing would
+    /// replace the list with the part that had loaded.
     func refreshResources() async {
+        await Task { await listAllResources() }.value
+    }
+
+    private func listAllResources() async {
         guard !loadingResources else { return }
         loadingResources = true
         defer { loadingResources = false }
@@ -83,6 +98,7 @@ final class AppModel {
             return current.compactMap { all[$0.id] }
         }
         resources = mergeByID(results.map { (keyID: $0.keyID, items: $0.resources) })
+        resourcesListedFor = current.map(\.id)
         projectNames = results.reduce(into: [:]) { names, result in names.merge(result.names) { first, _ in first } }
         problems = problems.filter { $0.area != .other }
             + results.compactMap { result in result.problem.map { KeyProblem(keyID: result.keyID, area: .other, message: $0) } }

@@ -39,7 +39,7 @@ struct OtherView: View {
             }
         }
         .task(id: model.keys.map(\.id)) {
-            if pro.isPro(keys: model.keys) { await model.refreshResources() }
+            if pro.isPro(keys: model.keys) { await model.loadResourcesIfNeeded() }
         }
     }
 
