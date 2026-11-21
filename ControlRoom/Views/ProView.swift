@@ -19,26 +19,26 @@ struct ProView: View {
     ]
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if pro.subscribed {
-                    VStack(spacing: 16) {
-                        Image(systemName: "checkmark.seal.fill").font(.system(size: 56)).foregroundStyle(.tint)
-                        Text("You have Pro. Thank you!").font(.title3)
-                        Button("Manage subscription") { showManage = true }
-                    }
-                } else {
-                    SubscriptionStoreView(productIDs: ProProducts.all) { marketing }
-                        .storeButton(.visible, for: .restorePurchases)
-                        .subscriptionStorePolicyDestination(url: Links.terms, for: .termsOfService)
-                        .subscriptionStorePolicyDestination(url: Links.privacy, for: .privacyPolicy)
-                        .onInAppPurchaseCompletion { _, _ in await pro.check() }
+        if pro.subscribed {
+            NavigationStack {
+                VStack(spacing: 16) {
+                    Image(systemName: "checkmark.seal.fill").font(.system(size: 56)).foregroundStyle(.tint)
+                    Text("You have Pro. Thank you!").font(.title3)
+                    Button("Manage subscription") { showManage = true }
                 }
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+                }
+                .manageSubscriptionsSheet(isPresented: $showManage)
             }
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
-            }
-            .manageSubscriptionsSheet(isPresented: $showManage)
+        } else {
+            // StoreKit adds its own close button when presented in a sheet.
+            SubscriptionStoreView(productIDs: ProProducts.all) { marketing }
+                .storeButton(.visible, for: .restorePurchases)
+                .subscriptionStoreControlStyle(.picker)
+                .subscriptionStorePolicyDestination(url: Links.terms, for: .termsOfService)
+                .subscriptionStorePolicyDestination(url: Links.privacy, for: .privacyPolicy)
+                .onInAppPurchaseCompletion { _, _ in await pro.check() }
         }
     }
 
@@ -52,6 +52,7 @@ struct ProView: View {
                     VStack(alignment: .leading) {
                         Text(title).font(.headline)
                         Text(text).font(.subheadline).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 } icon: {
                     Image(systemName: "checkmark").foregroundStyle(.tint)
