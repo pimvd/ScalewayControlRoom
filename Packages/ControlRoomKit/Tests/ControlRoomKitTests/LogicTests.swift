@@ -74,8 +74,20 @@ final class LogicTests: XCTestCase {
     }
 
     func testSetupCommands() {
-        for set in Commands.appPermissionSets { XCTAssertTrue(Commands.keySetup.contains(set)) }
+        // One scope type per rule: project-level sets in rule 0, billing in rule 1.
+        for (index, set) in Commands.projectPermissionSets.enumerated() {
+            XCTAssertTrue(Commands.keySetup.contains("rules.0.permission-set-names.\(index)=\(set)"))
+        }
+        XCTAssertTrue(Commands.keySetup.contains("rules.1.permission-set-names.0=BillingReadOnly"))
         XCTAssertTrue(Commands.keySetup.contains("rules.0.organization-id=$ORG"))
+        XCTAssertTrue(Commands.keySetup.contains("rules.1.organization-id=$ORG"))
+        // The policy command continues over its lines, and the key is only
+        // created when the policy was.
+        let policy = Commands.keySetup.components(separatedBy: "\n").filter { $0.contains("rules.") || $0.contains("policy create") }
+        XCTAssertTrue(policy.dropLast().allSatisfy { $0.hasSuffix("\\") })
+        XCTAssertTrue(policy.last!.hasSuffix("&&"))
+        XCTAssertTrue(Commands.cockpitSources(for: Server(id: "i", name: "web", state: .running, commercialType: "DEV1-S",
+                                                          zone: .frPar1, project: "p")).contains("rules.0.project-ids.0=p"))
         let s = Server(id: "11111111-2222", name: "web", state: .running, commercialType: "DEV1-S", zone: .nlAms2, project: "p")
         XCTAssertTrue(Commands.cockpitSources(for: s).contains("type=logs project-id=p region=nl-ams"))
         XCTAssertTrue(Commands.cockpitSources(for: s).contains("type=metrics project-id=p region=nl-ams"))

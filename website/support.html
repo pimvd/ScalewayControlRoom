@@ -22,18 +22,19 @@
 
   <h3>With the scw CLI</h3>
 
-  <p>With the <a href="https://www.scaleway.com/en/docs/scaleway-cli/quickstart/">Scaleway CLI</a> set up, these commands create the application, give it the permission sets below for all current and future projects, and print the secret key and organization ID to paste into the app. The app shows the same commands with a Copy button under <em>Add API key</em>; with the same Apple account, copying on the iPhone and pasting in Terminal on a Mac just works. Leave out any permission set you do not want the app to have.</p>
+  <p>With the <a href="https://www.scaleway.com/en/docs/scaleway-cli/quickstart/">Scaleway CLI</a> set up, these commands create the application, give it the permission sets below for all current and future projects (billing in a rule of its own, as Scaleway requires), and print the secret key and organization ID to paste into the app. The app shows the same commands with a Copy button under <em>Add API key</em>; with the same Apple account, copying on the iPhone and pasting in Terminal on a Mac just works. Leave out any permission set you do not want the app to have.</p>
 
   <pre><code>ORG=$(scw config get default-organization-id)
 APP=$(scw iam application create name=controlroom description=&quot;ControlRoom iPhone app&quot; -o template=&quot;{{ .ID }}&quot;)
 scw iam policy create name=controlroom application-id=$APP \
   rules.0.organization-id=$ORG \
   rules.0.permission-set-names.0=InstancesFullAccess \
-  rules.0.permission-set-names.1=BillingReadOnly \
-  rules.0.permission-set-names.2=ContainersReadOnly \
-  rules.0.permission-set-names.3=FunctionsReadOnly \
-  rules.0.permission-set-names.4=ObservabilityReadOnly
-scw iam api-key create application-id=$APP description=controlroom
+  rules.0.permission-set-names.1=ContainersReadOnly \
+  rules.0.permission-set-names.2=FunctionsReadOnly \
+  rules.0.permission-set-names.3=ObservabilityReadOnly \
+  rules.1.organization-id=$ORG \
+  rules.1.permission-set-names.0=BillingReadOnly &amp;&amp;
+scw iam api-key create application-id=$APP description=controlroom &amp;&amp;
 echo &quot;Organization ID: $ORG&quot;</code></pre>
 
   <h3>In the console</h3>

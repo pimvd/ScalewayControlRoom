@@ -1,28 +1,34 @@
 /// Shell commands the setup screens show, ready to copy.
 public enum Commands {
-    /// The permission sets the app can use. Scoped to the organization, a
-    /// rule covers all current and future projects.
-    public static let appPermissionSets = [
+    /// The permission sets the app can use. A rule may only hold sets of one
+    /// scope type, so project-level and organization-level sets get a rule
+    /// each. Scoped to the organization, a rule with project-level sets covers
+    /// all current and future projects.
+    public static let projectPermissionSets = [
         "InstancesFullAccess",
-        "BillingReadOnly",
         "ContainersReadOnly",
         "FunctionsReadOnly",
         "ObservabilityReadOnly",
     ]
+    public static let organizationPermissionSets = ["BillingReadOnly"]
 
-    private static func rules(_ scope: String, _ sets: [String]) -> String {
-        ([scope] + sets.enumerated().map { "rules.0.permission-set-names.\($0.offset)=\($0.element)" })
+    /// Policy rule arguments: `rules.N.<scope>` and its permission sets.
+    private static func rule(_ index: Int, _ scope: String, _ sets: [String]) -> String {
+        (["rules.\(index).\(scope)"] + sets.enumerated().map { "rules.\(index).permission-set-names.\($0.offset)=\($0.element)" })
             .joined(separator: " \\\n  ")
     }
 
     /// scw CLI: an IAM application for the app, its policy and its API key.
+    /// The key is only created when the policy was: a key without
+    /// permissions sees nothing.
     public static var keySetup: String {
         """
         ORG=$(scw config get default-organization-id)
         APP=$(scw iam application create name=controlroom description="ControlRoom iPhone app" -o template="{{ .ID }}")
         scw iam policy create name=controlroom application-id=$APP \\
-          \(rules("rules.0.organization-id=$ORG", appPermissionSets))
-        scw iam api-key create application-id=$APP description=controlroom
+          \(rule(0, "organization-id=$ORG", projectPermissionSets)) \\
+          \(rule(1, "organization-id=$ORG", organizationPermissionSets)) &&
+        scw iam api-key create application-id=$APP description=controlroom &&
         echo "Organization ID: $ORG"
         """
     }
@@ -37,9 +43,9 @@ public enum Commands {
         METRICS_URL=$(scw cockpit data-source create name=controlroom-metrics type=metrics \(place) -o template="{{ .URL }}")
         APP=$(scw iam application create name=\(name) -o template="{{ .ID }}")
         scw iam policy create name=\(name) application-id=$APP \\
-          \(rules("rules.0.project-ids.0=\(server.project)", ["ObservabilityFullAccess"]))
-        scw iam api-key create application-id=$APP description=\(name)
-        echo "Logs URL: $LOGS_URL"
+          \(rule(0, "project-ids.0=\(server.project)", ["ObservabilityFullAccess"])) &&
+        scw iam api-key create application-id=$APP description=\(name) &&
+        echo "Logs URL: $LOGS_URL" &&
         echo "Metrics URL: $METRICS_URL"
         """
     }
