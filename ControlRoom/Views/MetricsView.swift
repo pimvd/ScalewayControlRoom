@@ -129,21 +129,24 @@ private struct MetricChart: View {
     var series: [MetricSeries]
     var name: String
 
+    /// A count of instances jumps between whole numbers.
+    private var interpolation: InterpolationMethod { isInstanceCount(name) ? .stepEnd : .monotone }
+
     var body: some View {
         Chart {
             ForEach(series, id: \.instance) { line in
                 ForEach(line.points, id: \.time) { point in
                     if series.count == 1 {
                         LineMark(x: .value("Time", point.time), y: .value("Value", point.value))
-                            .interpolationMethod(.monotone)
+                            .interpolationMethod(interpolation)
                         AreaMark(x: .value("Time", point.time), y: .value("Value", point.value))
                             .foregroundStyle(.tint.opacity(0.15))
-                            .interpolationMethod(.monotone)
+                            .interpolationMethod(interpolation)
                     } else {
                         LineMark(x: .value("Time", point.time), y: .value("Value", point.value),
                                  series: .value("Instance", line.instance))
                             .foregroundStyle(by: .value("Instance", instanceLabel(line.instance)))
-                            .interpolationMethod(.monotone)
+                            .interpolationMethod(interpolation)
                     }
                 }
             }

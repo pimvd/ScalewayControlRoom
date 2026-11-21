@@ -110,18 +110,24 @@ public func formatMoney(_ amount: Double, currency: String = "EUR") -> String {
 
 // MARK: Metrics
 
+/// Scaleway's `serverless_container_instances_total` counts running
+/// instances. It has no samples while the app is scaled to zero.
+public func isInstanceCount(_ name: String) -> Bool { name.hasSuffix("instances_total") }
+
 /// Counters only ever go up; what matters is how fast. Cockpit does not say
-/// which metrics are counters, so the name tells, except that Scaleway's
-/// `serverless_container_instances_total` is a count of instances.
+/// which metrics are counters, so the name tells, except for the instance count.
 public func isCounter(_ name: String) -> Bool {
-    guard !name.hasSuffix("instances_total") else { return false }
+    guard !isInstanceCount(name) else { return false }
     return name.hasSuffix("_total") || name.hasSuffix("_count") || name.hasSuffix("_sum")
 }
 
 /// PromQL for one metric of one resource, one series per instance: the rate
-/// per second for a counter, the average for anything else.
+/// per second for a counter, the average for anything else. The instance
+/// count is one series, 0 where there are no samples (scaled to zero) so the
+/// chart does not bridge those gaps.
 public func metricQuery(_ name: String, selector: String) -> String {
     let selector = name + selector
+    if isInstanceCount(name) { return "sum(\(selector)) or vector(0)" }
     return isCounter(name) ? "sum by (resource_instance) (rate(\(selector)[5m]))" : "avg by (resource_instance) (\(selector))"
 }
 
@@ -155,6 +161,7 @@ public func metricStep(minutes: Int) -> Int {
 public func formatMetric(_ value: Double, name: String) -> String {
     let perSecond = isCounter(name) ? "/s" : ""
     if value == 0 { return "0" + perSecond }
+    if isInstanceCount(name) { return String(format: "%.0f", value) }
     if name.contains("bytes") {
         var amount = value
         var unit = 0

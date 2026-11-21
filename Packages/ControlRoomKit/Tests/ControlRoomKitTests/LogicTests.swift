@@ -119,6 +119,10 @@ final class LogicTests: XCTestCase {
                        #"avg by (resource_instance) (memory_usage_bytes{resource_id="r"})"#)
         // Scaleway's instance count ends in _total but is no counter.
         XCTAssertFalse(isCounter("serverless_container_instances_total"))
+        // Scaled to zero there are no samples: count those as 0.
+        XCTAssertEqual(metricQuery("serverless_container_instances_total", selector: #"{resource_id="r"}"#),
+                       #"sum(serverless_container_instances_total{resource_id="r"}) or vector(0)"#)
+        XCTAssertEqual(formatMetric(2, name: "serverless_container_instances_total"), "2")
         XCTAssertTrue(isCounter("serverless_container_receive_bytes_total"))
         XCTAssertEqual(metricStep(minutes: 15), 15)
         XCTAssertEqual(metricStep(minutes: 1440), 864)
