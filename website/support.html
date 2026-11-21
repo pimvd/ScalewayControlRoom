@@ -7,7 +7,8 @@
   <style>
     body { font-family: -apple-system, system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #222; }
     code { background: #f2f2f2; padding: 1px 4px; border-radius: 4px; }
-    @media (prefers-color-scheme: dark) { body { background: #111; color: #ddd; } a { color: #8ab4ff; } code { background: #222; } }
+    pre { background: #f2f2f2; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.45; }
+    @media (prefers-color-scheme: dark) { body { background: #111; color: #ddd; } a { color: #8ab4ff; } code, pre { background: #222; } }
   </style>
 </head>
 <body>
@@ -18,6 +19,24 @@
   <h2>Setting up an API key</h2>
 
   <p>Use a key that belongs to an IAM application made for ControlRoom, not your personal key. That way the app can do only what you allow, and you can revoke it at any time without touching anything else.</p>
+
+  <h3>With the scw CLI</h3>
+
+  <p>With the <a href="https://www.scaleway.com/en/docs/scaleway-cli/quickstart/">Scaleway CLI</a> set up, these commands create the application, give it the permission sets below for all current and future projects, and print the secret key and organization ID to paste into the app. The app shows the same commands with a Copy button under <em>Add API key</em>; with the same Apple account, copying on the iPhone and pasting in Terminal on a Mac just works. Leave out any permission set you do not want the app to have.</p>
+
+  <pre><code>ORG=$(scw config get default-organization-id)
+APP=$(scw iam application create name=controlroom description=&quot;ControlRoom iPhone app&quot; -o template=&quot;{{ .ID }}&quot;)
+scw iam policy create name=controlroom application-id=$APP \
+  rules.0.organization-id=$ORG \
+  rules.0.permission-set-names.0=InstancesFullAccess \
+  rules.0.permission-set-names.1=BillingReadOnly \
+  rules.0.permission-set-names.2=ContainersReadOnly \
+  rules.0.permission-set-names.3=FunctionsReadOnly \
+  rules.0.permission-set-names.4=ObservabilityReadOnly
+scw iam api-key create application-id=$APP description=controlroom
+echo &quot;Organization ID: $ORG&quot;</code></pre>
+
+  <h3>In the console</h3>
 
   <ol>
     <li>In the <a href="https://console.scaleway.com/">Scaleway console</a>, open <em>IAM → Applications</em> and create an application, for example <code>controlroom</code>.</li>
@@ -40,12 +59,18 @@
 
   <p><strong>Serverless containers and functions</strong> send their logs to Cockpit by themselves: everything they write to standard output and standard error. Open the app in the Serverless tab and tap <em>Logs</em>.</p>
 
-  <p><strong>Instances</strong> do not. An agent on the instance has to push the logs to Cockpit; once it does, they show up in the app. To set it up:</p>
+  <p><strong>Instances</strong> do not. An agent on the instance has to push the logs to Cockpit; once it does, they show up in the app. The quickest way: open the instance in the app and tap <em>Logs</em>. It shows three blocks of commands, filled in for that instance, each with a Copy button:</p>
+  <ol>
+    <li>on your computer, with the scw CLI: a custom logs data source in the instance's project and region, and a separate key that may push to it;</li>
+    <li>on the instance: install Grafana Alloy;</li>
+    <li>on the instance: write the Alloy configuration, with the data source URL and key from step 1, and restart Alloy.</li>
+  </ol>
+  <p>Or by hand in the console:</p>
   <ol>
     <li>In the console, open <em>Cockpit → Data sources</em> and create a custom data source of type <em>Logs</em> in the instance's region. Copy its URL.</li>
     <li>Create a separate API key that may push to Cockpit (an IAM application with <code>ObservabilityFullAccess</code>). Do not reuse the key in the app.</li>
     <li>Install <a href="https://grafana.com/docs/alloy/latest/set-up/install/linux/">Grafana Alloy</a> on the instance.</li>
-    <li>In the app, open the instance, tap <em>Logs</em> and then <em>Share configuration</em>. Put it in <code>/etc/alloy/config.alloy</code>, fill in the data source URL and the secret key, and run <code>systemctl restart alloy</code>.</li>
+    <li>Copy the configuration from step 3 in the app: it writes <code>/etc/alloy/config.alloy</code> and restarts Alloy.</li>
   </ol>
   <p>The configuration labels every line with the instance's ID (<code>resource_id</code>), which is how the app finds them. Logs you push yourself are billed by Scaleway as Cockpit custom data.</p>
 

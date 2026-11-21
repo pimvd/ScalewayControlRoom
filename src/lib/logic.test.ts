@@ -11,7 +11,9 @@ import {
   total,
   uniqueOrganizations,
 } from './logic';
+import { APP_PERMISSION_SETS, alloyConfigCommands, keySetupCommands, logsSourceCommands } from './commands';
 import { money, toLogLines, toServer } from './scaleway';
+import { shouldAskForReview } from './review';
 import type { Key, Server } from './types';
 
 function server(id: string, name: string, state: Server['state'], tags: string[] = []): Server {
@@ -148,5 +150,27 @@ describe('demo', () => {
     expect((await list()).find((s) => s.id === 'demo-1')!.state).toBe('stopping');
     jest.advanceTimersByTime(3000);
     expect((await list()).find((s) => s.id === 'demo-1')!.state).toBe('stopped');
+  });
+});
+
+describe('setup commands', () => {
+  const s = server('11111111-2222-3333-4444-555555555555', 'web', 'running');
+
+  it('give the app key every permission set, scoped to the organization', () => {
+    const commands = keySetupCommands();
+    for (const set of APP_PERMISSION_SETS) expect(commands).toContain(set);
+    expect(commands).toContain('rules.0.organization-id=$ORG');
+  });
+
+  it('fill in the instance for its logs', () => {
+    expect(logsSourceCommands(s)).toContain('project-id=p region=fr-par');
+    expect(alloyConfigCommands(s)).toContain('resource_id   = "11111111-2222-3333-4444-555555555555"');
+    expect(alloyConfigCommands(s)).toContain('"${DS_URL}/loki/api/v1/push"');
+  });
+});
+
+describe('review prompt', () => {
+  it('asks at a few milestones only', () => {
+    expect([1, 2, 3, 4, 20, 21, 60].map(shouldAskForReview)).toEqual([false, false, true, false, true, false, true]);
   });
 });

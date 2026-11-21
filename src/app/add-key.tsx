@@ -2,7 +2,9 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Linking, ScrollView, Text, TextInput } from 'react-native';
 
+import { CommandBlock } from '@/components/command';
 import { Banner, Button, Muted, styles, useColors } from '@/components/ui';
+import { keySetupCommands } from '@/lib/commands';
 import { newKeyId, validateKey } from '@/lib/keys';
 import { SUPPORT_URL } from '@/lib/links';
 import { FREE_KEYS, usePro } from '@/lib/pro';
@@ -79,11 +81,12 @@ export default function AddKeyScreen() {
   return (
     <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
       <Muted style={{ marginBottom: 16 }}>
-        Create an IAM application with its own API key in the Scaleway console. Give it only the permission sets
-        you want this app to use: InstancesFullAccess to start and stop, BillingReadOnly for costs,
-        ContainersReadOnly and FunctionsReadOnly for serverless, ObservabilityReadOnly for logs.
+        Give the app its own IAM application and API key. With the scw CLI, run the commands below on your computer:
+        they print the secret key and the organization ID to paste here. Remove any permission set you do not want
+        the app to have; the app hides what its key may not do.
       </Muted>
-      <Button title="Open the setup guide" kind="secondary" onPress={() => Linking.openURL(SUPPORT_URL)} />
+      <CommandBlock title="On your computer, with the scw CLI" command={keySetupCommands()} />
+      <Button title="Setup guide (also without the CLI)" kind="secondary" onPress={() => Linking.openURL(SUPPORT_URL)} />
       {field('Name', label, setLabel, { placeholder: 'Work' })}
       {field('Secret key', secretKey, setSecretKey, { secure: true, placeholder: '1a2b3c4d-…' })}
       {field('Organization ID', organizationId, setOrganizationId, { placeholder: '1a2b3c4d-…' })}

@@ -1,8 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { demoClient } from './demo';
+import { DEMO_KEY, demoClient } from './demo';
 import { loadKeys, saveKeys } from './keys';
 import { isBusy, mergeById, sortServers, type Listed } from './logic';
+import { noteSuccessfulAction } from './review';
 import { isForbidden, scalewayClient } from './scaleway';
 import {
   REGIONS,
@@ -200,6 +201,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const state = action === 'poweroff' ? 'stopping' : 'starting';
         setServers((all) => all.map((l) => (l.item.id === listed.item.id ? { ...l, item: { ...l.item, state } } : l)));
       }
+      // Demo actions do not count: App Review and first-time users are not
+      // the people to ask for a rating yet.
+      if (!listed.keyIds.includes(DEMO_KEY.id)) noteSuccessfulAction().catch(() => {});
       await refreshWith(keys);
     },
   };

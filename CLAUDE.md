@@ -23,7 +23,11 @@ user's API keys, which live in the keychain (`expo-secure-store`).
   `add-key` modal; `demo` (the `controlroom://demo` link that turns the demo on,
   used for screenshots).
 - `src/components/instance-logs-setup.tsx` the guide shown when an instance has
-  no logs, with a ready Grafana Alloy config.
+  no logs. Setup screens show copyable scw CLI and shell commands
+  (`src/lib/commands.ts`, `CommandBlock` in `src/components/command.tsx`);
+  `website/support.html` repeats the key setup commands, keep them in step.
+- `src/lib/review.ts` asks for an App Store rating after the 3rd, 20th and
+  60th successful start/stop with a real key (never in the demo).
 - `src/lib/types.ts` domain types and the `ScalewayClient` interface.
 - `src/lib/scaleway.ts` the real client; `src/lib/demo.ts` the demo client and
   data. The demo key is an ordinary key whose client is fake, so there is no
