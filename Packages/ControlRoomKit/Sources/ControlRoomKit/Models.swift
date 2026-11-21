@@ -64,7 +64,12 @@ public struct Server: Identifiable, Hashable, Sendable {
 }
 
 public struct ServerlessApp: Identifiable, Hashable, Sendable {
-    public enum Kind: String, Sendable { case container, function, job }
+    public enum Kind: String, CaseIterable, Sendable {
+        case container, function, job
+
+        /// "Containers", "Functions", "Jobs".
+        public var plural: String { rawValue.prefix(1).uppercased() + rawValue.dropFirst() + "s" }
+    }
 
     public var id: String
     public var name: String

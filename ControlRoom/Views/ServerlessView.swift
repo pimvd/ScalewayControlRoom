@@ -4,6 +4,9 @@ import SwiftUI
 struct ServerlessView: View {
     @Environment(AppModel.self) private var model
     @Environment(ProStore.self) private var pro
+    @State private var kind = ServerlessApp.Kind.container
+
+    private var apps: [Listed<ServerlessApp>] { model.serverless.filter { $0.item.kind == kind } }
 
     var body: some View {
         Group {
@@ -11,10 +14,16 @@ struct ServerlessView: View {
                 ProGate(text: "Your serverless containers, functions and jobs, with their logs and metrics, are part of Pro.")
             } else {
                 List {
+                    Picker("Kind", selection: $kind) {
+                        ForEach(ServerlessApp.Kind.allCases, id: \.self) { Text($0.plural).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
                     ForEach(model.problems.filter { $0.area == .serverless }) { problem in
                         ProblemBanner(text: "\(model.label(of: problem.keyID)): \(problem.message)")
                     }
-                    ForEach(model.serverless) { listed in
+                    ForEach(apps) { listed in
                         NavigationLink(value: Destination.serverless(listed.id)) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(listed.item.name).font(.headline)
@@ -22,9 +31,9 @@ struct ServerlessView: View {
                             }
                         }
                     }
-                    if model.serverless.isEmpty && !model.refreshing {
+                    if apps.isEmpty && !model.refreshing {
                         Text(model.keys.isEmpty ? "Add an API key first."
-                             : "No serverless containers, functions or jobs found for your keys.")
+                             : "No serverless \(kind.plural.lowercased()) found for your keys.")
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -35,7 +44,8 @@ struct ServerlessView: View {
     }
 
     private func details(_ listed: Listed<ServerlessApp>) -> String {
-        var parts = [listed.item.kind.rawValue, listed.item.region.rawValue, listed.item.status]
+        var parts = [listed.item.region.rawValue, listed.item.status]
+        if !listed.item.schedule.isEmpty { parts.append(listed.item.schedule) }
         if model.keys.count > 1 { parts.append(model.label(of: listed.keyIDs[0])) }
         return parts.joined(separator: " · ")
     }

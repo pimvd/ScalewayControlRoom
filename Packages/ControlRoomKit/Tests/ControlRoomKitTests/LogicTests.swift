@@ -124,6 +124,10 @@ final class LogicTests: XCTestCase {
         XCTAssertEqual(metricStep(minutes: 1440), 864)
     }
 
+    func testServerlessKindsHaveTabLabels() {
+        XCTAssertEqual(ServerlessApp.Kind.allCases.map(\.plural), ["Containers", "Functions", "Jobs"])
+    }
+
     func testMetricTitlesAndInstanceLabels() {
         XCTAssertEqual(metricTitle("serverless_container_cpu_usage_ratio"), "CPU usage")
         XCTAssertEqual(metricTitle("serverless_container_receive_bytes_total"), "Receive bytes")
