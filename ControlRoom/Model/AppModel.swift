@@ -51,8 +51,7 @@ final class AppModel {
                                    keyIDs: listed.keyIDs, server: server)
         case .serverless:
             guard let listed = serverless.first(where: { $0.id == id }) else { return nil }
-            return CockpitResource(target: CockpitTarget(projectID: listed.item.projectID, region: listed.item.region, resourceID: id),
-                                   keyIDs: listed.keyIDs, server: nil)
+            return CockpitResource(target: listed.item.cockpitTarget, keyIDs: listed.keyIDs, server: nil)
         }
     }
 
@@ -116,7 +115,7 @@ final class AppModel {
         // A key that may not see serverless has none; say why only when it may
         // not anywhere, rather than leave an unexplained empty list.
         async let apps = listAll(Region.allCases, quietForbidden: true,
-                                 forbiddenEverywhere: "This key may not list serverless apps. Add ContainersReadOnly and FunctionsReadOnly to its policy.") {
+                                 forbiddenEverywhere: "This key may not list serverless apps. Add ContainersReadOnly, FunctionsReadOnly and ServerlessJobsReadOnly to its policy.") {
             try await api.listServerless(region: $0)
         }
         let (i, a) = await (instances, apps)

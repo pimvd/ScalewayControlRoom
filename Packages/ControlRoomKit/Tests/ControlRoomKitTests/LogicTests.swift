@@ -113,8 +113,8 @@ final class LogicTests: XCTestCase {
     }
 
     func testMetricQueriesRateCountersAndAverageTheRest() {
-        XCTAssertEqual(metricQuery("http_requests_total", resourceID: "r"), #"sum(rate(http_requests_total{resource_id="r"}[5m]))"#)
-        XCTAssertEqual(metricQuery("memory_usage_bytes", resourceID: "r"), #"avg(memory_usage_bytes{resource_id="r"})"#)
+        XCTAssertEqual(metricQuery("http_requests_total", selector: #"{resource_id="r"}"#), #"sum(rate(http_requests_total{resource_id="r"}[5m]))"#)
+        XCTAssertEqual(metricQuery("memory_usage_bytes", selector: #"{resource_id="r"}"#), #"avg(memory_usage_bytes{resource_id="r"})"#)
         XCTAssertEqual(metricStep(minutes: 15), 15)
         XCTAssertEqual(metricStep(minutes: 1440), 864)
     }

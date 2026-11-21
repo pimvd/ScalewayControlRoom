@@ -59,7 +59,10 @@ final class ScalewayAPITests: XCTestCase {
 
     func testARegionWithoutTheProductIsRecognised() async {
         let transport = FakeTransport()
-        transport.responses["/containers/v1/regions/it-mil/namespaces"] = (404, #"{"message": "unknown service"}"#)
+        for path in ["/containers/v1/regions/it-mil/namespaces", "/functions/v1beta1/regions/it-mil/namespaces",
+                     "/serverless-jobs/v1alpha1/regions/it-mil/job-definitions"] {
+            transport.responses[path] = (501, #"{"message": "unknown service"}"#)
+        }
         do {
             _ = try await ScalewayAPI(key: key, transport: transport).listServerless(region: .itMil)
             XCTFail("expected an error")
@@ -122,10 +125,23 @@ final class ScalewayAPITests: XCTestCase {
             {"functions": [{"id": "f1", "name": "hook", "status": "ready", "namespace_id": "ns-f",
               "min_scale": 0, "max_scale": 1, "domain_name": "hook.example"}]}
             """)
+        transport.responses["/serverless-jobs/v1alpha1/regions/fr-par/job-definitions"] = (200, """
+            {"job_definitions": [{"id": "j1", "name": "worker", "project_id": "p-j",
+              "cron_schedule": {"schedule": "*/15 * * * *", "timezone": "Europe/Amsterdam"}}]}
+            """)
+        transport.responses["/serverless-jobs/v1alpha1/regions/fr-par/job-runs"] = (200,
+            #"{"job_runs": [{"id": "r1", "job_definition_id": "j1", "state": "succeeded"}]}"#)
         let apps = try await ScalewayAPI(key: key, transport: transport).listServerless(region: .frPar)
-        XCTAssertEqual(apps.map(\.projectID), ["p-c", "p-f"])
-        XCTAssertEqual(apps.map(\.kind), [.container, .function])
-        XCTAssertEqual(apps.map(\.endpoint), ["api.example", "hook.example"])
+        XCTAssertEqual(apps.map(\.projectID), ["p-c", "p-f", "p-j"])
+        XCTAssertEqual(apps.map(\.kind), [.container, .function, .job])
+        XCTAssertEqual(apps.map(\.endpoint), ["api.example", "hook.example", ""])
+        // A job's status is its last run's.
+        XCTAssertEqual(apps[2].status, "succeeded")
+        XCTAssertEqual(apps[2].schedule, "*/15 * * * * (Europe/Amsterdam)")
+        let runs = transport.queries(for: "/serverless-jobs/v1alpha1/regions/fr-par/job-runs").first
+        XCTAssertEqual(runs?["job_definition_id"], "j1")
+        XCTAssertEqual(runs?["order_by"], "created_at_desc")
+        XCTAssertEqual(runs?["page_size"], "1")
         XCTAssertEqual(transport.queries(for: "/functions/v1beta1/regions/fr-par/functions").first?["namespace_id"], "ns-f")
     }
 
@@ -135,9 +151,10 @@ final class ScalewayAPITests: XCTestCase {
             transport.responses[path] = (200, #"{"namespaces": []}"#)
         }
         transport.responses["/containers/v1/regions/fr-par/containers"] = (200, #"{"containers": []}"#)
+        transport.responses["/serverless-jobs/v1alpha1/regions/fr-par/job-definitions"] = (200, #"{"job_definitions": []}"#)
         _ = try await ScalewayAPI(key: key, transport: transport).listServerless(region: .frPar)
         for path in ["/containers/v1/regions/fr-par/namespaces", "/containers/v1/regions/fr-par/containers",
-                     "/functions/v1beta1/regions/fr-par/namespaces"] {
+                     "/functions/v1beta1/regions/fr-par/namespaces", "/serverless-jobs/v1alpha1/regions/fr-par/job-definitions"] {
             XCTAssertEqual(transport.queries(for: path).first?["organization_id"], "org-1", path)
         }
     }
@@ -149,14 +166,27 @@ final class ScalewayAPITests: XCTestCase {
         transport.responses["/containers/v1/regions/fr-par/containers"] = (200,
             #"{"containers": [{"id": "c1", "name": "api", "status": "ready", "namespace_id": "ns-c"}]}"#)
         transport.responses["/functions/v1beta1/regions/fr-par/namespaces"] = (403, #"{"message": "insufficient permissions"}"#)
+        transport.responses["/serverless-jobs/v1alpha1/regions/fr-par/job-definitions"] = (403, #"{"message": "insufficient permissions"}"#)
         let apps = try await ScalewayAPI(key: key, transport: transport).listServerless(region: .frPar)
         XCTAssertEqual(apps.map(\.id), ["c1"])
     }
 
-    func testAKeyThatMaySeeNeitherIsForbidden() async {
+    func testARegionWithoutJobsStillListsContainers() async throws {
+        let transport = FakeTransport()
+        transport.responses["/containers/v1/regions/fr-par/namespaces"] = (200,
+            #"{"namespaces": [{"id": "ns-c", "project_id": "p-c"}]}"#)
+        transport.responses["/containers/v1/regions/fr-par/containers"] = (200,
+            #"{"containers": [{"id": "c1", "name": "api", "status": "ready", "namespace_id": "ns-c"}]}"#)
+        transport.responses["/functions/v1beta1/regions/fr-par/namespaces"] = (200, #"{"namespaces": []}"#)
+        transport.responses["/serverless-jobs/v1alpha1/regions/fr-par/job-definitions"] = (501, #"{"message": "unknown service"}"#)
+        let apps = try await ScalewayAPI(key: key, transport: transport).listServerless(region: .frPar)
+        XCTAssertEqual(apps.map(\.id), ["c1"])
+    }
+
+    func testAKeyThatMaySeeNoneIsForbidden() async {
         let transport = FakeTransport()
         for path in ["/containers/v1/regions/fr-par/namespaces", "/containers/v1/regions/fr-par/containers",
-                     "/functions/v1beta1/regions/fr-par/namespaces"] {
+                     "/functions/v1beta1/regions/fr-par/namespaces", "/serverless-jobs/v1alpha1/regions/fr-par/job-definitions"] {
             transport.responses[path] = (403, #"{"message": "insufficient permissions"}"#)
         }
         do {
@@ -186,6 +216,17 @@ final class ScalewayAPITests: XCTestCase {
         let query = transport.queries(for: "/loki/api/v1/query_range").first!
         XCTAssertEqual(query["query"], #"{resource_id="r1"}"#)
         XCTAssertEqual(transport.queries(for: "/cockpit/v1/regions/fr-par/data-sources").first?["project_id"], "p")
+    }
+
+    func testJobLogsAreFoundByJobDefinition() async throws {
+        let transport = FakeTransport()
+        transport.responses["/cockpit/v1/regions/fr-par/data-sources"] = (200,
+            #"{"data_sources": [{"url": "https://a.logs.cockpit.fr-par.scw.cloud"}]}"#)
+        transport.responses["/loki/api/v1/query_range"] = (200, #"{"data": {"result": []}}"#)
+        let job = ServerlessApp(id: "j1", name: "worker", kind: .job, status: "succeeded", region: .frPar,
+                                projectID: "p", endpoint: "", minScale: 0, maxScale: 0)
+        _ = try await ScalewayAPI(key: key, transport: transport).logs(target: job.cockpitTarget, minutes: 60)
+        XCTAssertEqual(transport.queries(for: "/loki/api/v1/query_range").first?["query"], #"{job_definition_id="j1"}"#)
     }
 
     func testMetricsAreFoundByResourceIDAndQueriedThroughPrometheus() async throws {

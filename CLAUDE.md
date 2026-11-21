@@ -68,7 +68,10 @@ Swift package for everything that is not UI.
   Charts). The instance guide's Alloy config pushes basic node metrics with the
   same label.
 - Serverless: containers (v1) and functions (v1beta1) carry no project; it
-  comes from their namespace. Functions can only be listed per namespace. A
+  comes from their namespace. Functions can only be listed per namespace.
+  Jobs (serverless-jobs v1alpha1) are job definitions; their status is the
+  last run's state. Cockpit labels job logs `job_definition_id` (their
+  `resource_id` is the run), so `CockpitTarget.label` says which to query. A
   key that may not see serverless (401/403) is left out quietly.
 - Stop uses `poweroff`, which releases the hypervisor and stops compute
   billing. `stop_in_place` is deliberately not offered.

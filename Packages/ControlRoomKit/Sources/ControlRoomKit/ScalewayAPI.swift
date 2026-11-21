@@ -137,20 +137,24 @@ public struct ScalewayAPI: ScalewayClient {
     }
 
     public func listServerless(region: Region) async throws -> [ServerlessApp] {
-        // Containers and functions are separate products with separate
-        // permission sets: a key that may see only one of them still lists it.
+        // Containers, functions and jobs are separate products with separate
+        // permission sets, not all offered in every region: a key that may see
+        // only some of them still lists those.
         async let containers = attempt { try await serverlessApps(region, .container) }
         async let functions = attempt { try await serverlessApps(region, .function) }
-        let results = await [containers, functions]
-        let failures = results.compactMap { result -> Error? in
-            if case .failure(let error) = result { return error }
+        async let jobs = attempt { try await serverlessJobs(region) }
+        let results = await [containers, functions, jobs]
+        let failures = results.compactMap { result -> APIError? in
+            if case .failure(let error) = result { return error as? APIError ?? APIError(status: 0, message: error.localizedDescription) }
             return nil
         }
-        let forbidden = failures.filter { ($0 as? APIError)?.isForbidden == true }
-        // Anything but "may not" is a real problem; "may not" only when neither
-        // product is allowed.
-        if let other = failures.first(where: { ($0 as? APIError)?.isForbidden != true }) { throw other }
-        if forbidden.count == results.count { throw forbidden[0] }
+        let unknown = failures.filter(\.isUnknownService)
+        let forbidden = failures.filter(\.isForbidden)
+        // Anything else is a real problem; "unknown service" when the region
+        // offers none of them, and "may not" when none it offers is allowed.
+        if let other = failures.first(where: { !$0.isUnknownService && !$0.isForbidden }) { throw other }
+        if unknown.count == results.count { throw unknown[0] }
+        if let first = forbidden.first, forbidden.count + unknown.count == results.count { throw first }
         return results.flatMap { (try? $0.get()) ?? [] }
     }
 
@@ -178,6 +182,25 @@ public struct ScalewayAPI: ScalewayClient {
         }
     }
 
+    /// The organization's job definitions in a region. A job has no state of
+    /// its own: its status is that of its last run.
+    private func serverlessJobs(_ region: Region) async throws -> [ServerlessApp] {
+        let path = "serverless-jobs/v1alpha1/regions/\(region.rawValue)"
+        let jobs: [APIJobDefinition] = try await pages("\(path)/job-definitions",
+                                                       ["organization_id": key.organizationID], \.jobDefinitions)
+        var apps: [ServerlessApp] = []
+        for job in jobs {
+            let runs: ListResponse<APIJobRun> = try await send(url("\(path)/job-runs", [
+                "job_definition_id": job.id, "order_by": "created_at_desc", "page_size": "1",
+            ]))
+            let schedule = job.cronSchedule.map { "\($0.schedule) (\($0.timezone))" } ?? ""
+            apps.append(ServerlessApp(id: job.id, name: job.name, kind: .job, status: runs.jobRuns?.first?.state ?? "not run yet",
+                                      region: region, projectID: job.projectId, endpoint: "", minScale: 0, maxScale: 0,
+                                      schedule: schedule))
+        }
+        return apps
+    }
+
     private func attempt<T: Sendable>(_ work: () async throws -> T) async -> Result<T, Error> {
         do { return .success(try await work()) } catch { return .failure(error) }
     }
@@ -197,7 +220,7 @@ public struct ScalewayAPI: ScalewayClient {
         var responses: [LokiResponse] = []
         for base in sources {
             responses.append(try await send(url("loki/api/v1/query_range", [
-                "query": "{resource_id=\"\(target.resourceID)\"}",
+                "query": target.selector,
                 "start": "\(now - Int64(minutes) * 60_000)000000",
                 "end": "\(now)000000",
                 "limit": String(Self.logLimit),
@@ -215,7 +238,7 @@ public struct ScalewayAPI: ScalewayClient {
         var names = Set<String>()
         for base in sources {
             let response: PrometheusNames = try await send(url("prometheus/api/v1/label/__name__/values", [
-                "match[]": "{resource_id=\"\(target.resourceID)\"}",
+                "match[]": target.selector,
                 "start": String(now - minutes * 60), "end": String(now),
             ], base: base))
             names.formUnion(response.data)
@@ -227,7 +250,7 @@ public struct ScalewayAPI: ScalewayClient {
         let now = Int(Date().timeIntervalSince1970)
         for base in try await dataSources(target, type: "metrics") {
             let response: PrometheusMatrix = try await send(url("prometheus/api/v1/query_range", [
-                "query": metricQuery(name, resourceID: target.resourceID),
+                "query": metricQuery(name, selector: target.selector),
                 "start": String(now - minutes * 60), "end": String(now),
                 "step": String(metricStep(minutes: minutes)),
             ], base: base))
@@ -268,6 +291,8 @@ struct ListResponse<T: Decodable>: Decodable {
     var namespaces: [T]?
     var containers: [T]?
     var functions: [T]?
+    var jobDefinitions: [T]?
+    var jobRuns: [T]?
     var dataSources: [T]?
     var totalDiscountUntaxedValue: Double?
 }
@@ -331,6 +356,19 @@ struct APINamespace: Decodable {
     var id: String
     var projectId: String
 }
+
+struct APIJobDefinition: Decodable {
+    struct Cron: Decodable {
+        var schedule: String
+        var timezone: String
+    }
+    var id: String
+    var name: String
+    var projectId: String
+    var cronSchedule: Cron?
+}
+
+struct APIJobRun: Decodable { var state: String }
 
 struct APIServerless: Decodable {
     var id: String

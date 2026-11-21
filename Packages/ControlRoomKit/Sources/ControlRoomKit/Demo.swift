@@ -116,6 +116,8 @@ public enum Demo {
         app("demo-c2", "image-resizer", .container, "webshop", 10),
         app("demo-f1", "stripe-webhook", .function, "webshop", 3),
         app("demo-f2", "nightly-report", .function, "tooling", 1),
+        ServerlessApp(id: "demo-j1", name: "db-backup", kind: .job, status: "succeeded", region: .frPar,
+                      projectID: "tooling", endpoint: "", minScale: 0, maxScale: 0, schedule: "0 3 * * * (Europe/Paris)"),
     ]
 
     private static func app(_ id: String, _ name: String, _ kind: ServerlessApp.Kind, _ project: String,

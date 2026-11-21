@@ -8,6 +8,7 @@ public enum Commands {
         "InstancesFullAccess",
         "ContainersReadOnly",
         "FunctionsReadOnly",
+        "ServerlessJobsReadOnly",
         "ObservabilityReadOnly",
     ]
     public static let organizationPermissionSets = ["BillingReadOnly"]

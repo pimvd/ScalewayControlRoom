@@ -64,7 +64,7 @@ public struct Server: Identifiable, Hashable, Sendable {
 }
 
 public struct ServerlessApp: Identifiable, Hashable, Sendable {
-    public enum Kind: String, Sendable { case container, function }
+    public enum Kind: String, Sendable { case container, function, job }
 
     public var id: String
     public var name: String
@@ -75,9 +75,11 @@ public struct ServerlessApp: Identifiable, Hashable, Sendable {
     public var endpoint: String
     public var minScale: Int
     public var maxScale: Int
+    /// A job's cron schedule with its time zone; empty for the others.
+    public var schedule: String
 
     public init(id: String, name: String, kind: Kind, status: String, region: Region, projectID: String,
-                endpoint: String, minScale: Int, maxScale: Int) {
+                endpoint: String, minScale: Int, maxScale: Int, schedule: String = "") {
         self.id = id
         self.name = name
         self.kind = kind
@@ -87,21 +89,35 @@ public struct ServerlessApp: Identifiable, Hashable, Sendable {
         self.endpoint = endpoint
         self.minScale = minScale
         self.maxScale = maxScale
+        self.schedule = schedule
+    }
+
+    /// Cockpit labels a job's logs with its definition; their resource_id is
+    /// the run.
+    public var cockpitTarget: CockpitTarget {
+        CockpitTarget(projectID: projectID, region: region, resourceID: id,
+                      label: kind == .job ? "job_definition_id" : "resource_id")
     }
 }
 
 /// Where Cockpit keeps a resource's logs and metrics. Scaleway labels its data
-/// with the resource's ID, and the instance setup guide adds the same label.
+/// with the resource's ID (jobs: the job definition's), and the instance setup
+/// guide adds the same label.
 public struct CockpitTarget: Hashable, Sendable {
     public var projectID: String
     public var region: Region
     public var resourceID: String
+    public var label: String
 
-    public init(projectID: String, region: Region, resourceID: String) {
+    public init(projectID: String, region: Region, resourceID: String, label: String = "resource_id") {
         self.projectID = projectID
         self.region = region
         self.resourceID = resourceID
+        self.label = label
     }
+
+    /// The Loki and Prometheus label selector for the resource.
+    public var selector: String { "{\(label)=\"\(resourceID)\"}" }
 }
 
 public struct LogLine: Hashable, Sendable {

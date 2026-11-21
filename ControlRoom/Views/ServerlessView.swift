@@ -8,7 +8,7 @@ struct ServerlessView: View {
     var body: some View {
         Group {
             if !pro.isPro(keys: model.keys) {
-                ProGate(text: "Your serverless containers and functions, with their logs and metrics, are part of Pro.")
+                ProGate(text: "Your serverless containers, functions and jobs, with their logs and metrics, are part of Pro.")
             } else {
                 List {
                     ForEach(model.problems.filter { $0.area == .serverless }) { problem in
@@ -24,7 +24,7 @@ struct ServerlessView: View {
                     }
                     if model.serverless.isEmpty && !model.refreshing {
                         Text(model.keys.isEmpty ? "Add an API key first."
-                             : "No serverless containers or functions found for your keys.")
+                             : "No serverless containers, functions or jobs found for your keys.")
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -50,16 +50,23 @@ struct ServerlessDetailView: View {
             let app = listed.item
             List {
                 Section {
-                    LabeledContent("Kind", value: app.kind == .container ? "Serverless container" : "Serverless function")
-                    LabeledContent("Status", value: app.status)
+                    LabeledContent("Kind", value: "Serverless \(app.kind.rawValue)")
+                    LabeledContent(app.kind == .job ? "Last run" : "Status", value: app.status)
                     LabeledContent("Region", value: app.region.rawValue)
-                    LabeledContent("Scale", value: "\(app.minScale) to \(app.maxScale)")
+                    if app.kind == .job {
+                        if !app.schedule.isEmpty { LabeledContent("Schedule", value: app.schedule) }
+                    } else {
+                        LabeledContent("Scale", value: "\(app.minScale) to \(app.maxScale)")
+                    }
                     if !app.endpoint.isEmpty { LabeledContent("Endpoint", value: app.endpoint) }
                     LabeledContent("Project", value: app.projectID)
                     LabeledContent("Seen by", value: listed.keyIDs.map(model.label(of:)).joined(separator: ", "))
                 }
                 Section {
-                    NavigationLink("Metrics", value: Destination.metrics(.serverless, app.id))
+                    // Cockpit keeps logs for jobs, but no metrics.
+                    if app.kind != .job {
+                        NavigationLink("Metrics", value: Destination.metrics(.serverless, app.id))
+                    }
                     NavigationLink("Logs", value: Destination.logs(.serverless, app.id))
                 }
             }

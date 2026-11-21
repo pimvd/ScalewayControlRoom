@@ -117,8 +117,8 @@ public func isCounter(_ name: String) -> Bool {
 
 /// PromQL for one metric of one resource, summed to a single series: the rate
 /// per second for a counter, the average for anything else.
-public func metricQuery(_ name: String, resourceID: String) -> String {
-    let selector = "\(name){resource_id=\"\(resourceID)\"}"
+public func metricQuery(_ name: String, selector: String) -> String {
+    let selector = name + selector
     return isCounter(name) ? "sum(rate(\(selector)[5m]))" : "avg(\(selector))"
 }
 
