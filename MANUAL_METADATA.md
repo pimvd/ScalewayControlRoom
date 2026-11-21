@@ -10,7 +10,7 @@ holds the pictures, and the "Release to TestFlight" workflow sends both with
 
 App Store Connect → Apps → **+** → New App: iOS, name **Scaleway ControlRoom**,
 primary language English (U.S.), bundle ID `com.pvd.scwcontrolroom`, SKU
-`controlroom`. If the name is refused, try "ControlRoom for Scaleway" and
+`scwcontrolroom`. If the name is refused, try "ControlRoom for Scaleway" and
 change `name` in `AppStore/metadata/en-US.json` and `app.json` to match.
 
 ## 1. App Review Information — do this before the first metadata push
