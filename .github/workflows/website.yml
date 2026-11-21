@@ -1,21 +1,18 @@
 # Uploads website/ (plus the app icon and the App Store screenshots) to
-# https://vandijkcloud.nl/controlroom/ over FTP with TLS.
+# https://vandijkcloud.nl/controlroom/ over FTP.
 #
-# Repository secrets:
-#   WEBSITE_FTP_HOST      FTP server, e.g. ftp.vandijkcloud.nl
-#   WEBSITE_FTP_USER      FTP user name
-#   WEBSITE_FTP_PASSWORD  FTP password
-#   WEBSITE_FTP_ROOT      the site's web root on the server, e.g. /public_html
-#                         (the folder that holds https://vandijkcloud.nl/)
+# Repository secrets: FTP_HOST, FTP_USERNAME, FTP_PASSWORD (the same FTP
+# account as the vandijkcloud.nl site, whose root is the web root).
 #
-# Files go to <WEBSITE_FTP_ROOT>/controlroom only. Nothing is ever deleted on
-# the server, so a wrong root cannot wipe the rest of the site.
+# Everything goes to /controlroom/ only. FTP-Deploy-Action keeps its sync state
+# in that folder and only ever deletes files it uploaded there itself, so the
+# rest of the site is never touched.
 name: Website
 
 on:
   push:
     branches: [master]
-    paths: [website/**, AppStore/screenshots/**, assets/icon.png]
+    paths: [website/**, AppStore/screenshots/**, assets/icon.png, .github/workflows/website.yml]
   workflow_run:
     workflows: [Screenshots]
     types: [completed]
@@ -33,23 +30,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          # After the Screenshots workflow, take master with its new commit.
           ref: master
-
-      - name: Check the secrets are set
-        env:
-          WEBSITE_FTP_HOST: ${{ secrets.WEBSITE_FTP_HOST }}
-          WEBSITE_FTP_USER: ${{ secrets.WEBSITE_FTP_USER }}
-          WEBSITE_FTP_PASSWORD: ${{ secrets.WEBSITE_FTP_PASSWORD }}
-          WEBSITE_FTP_ROOT: ${{ secrets.WEBSITE_FTP_ROOT }}
-        run: |
-          missing=""
-          for name in WEBSITE_FTP_HOST WEBSITE_FTP_USER WEBSITE_FTP_PASSWORD WEBSITE_FTP_ROOT; do
-            [ -n "${!name}" ] || missing="$missing $name"
-          done
-          if [ -n "$missing" ]; then
-            echo "::error::Missing repository secret(s):$missing"
-            exit 1
-          fi
 
       - name: Assemble the site
         run: |
@@ -59,21 +41,11 @@ jobs:
           cp AppStore/screenshots/en-US/*.png site/screenshots/ 2>/dev/null || echo "No screenshots yet."
           find site -type f | sort
 
-      - name: Upload
-        env:
-          HOST: ${{ secrets.WEBSITE_FTP_HOST }}
-          FTP_USER: ${{ secrets.WEBSITE_FTP_USER }}
-          LFTP_PASSWORD: ${{ secrets.WEBSITE_FTP_PASSWORD }}
-          ROOT: ${{ secrets.WEBSITE_FTP_ROOT }}
-        run: |
-          sudo apt-get install -y -qq lftp > /dev/null
-          target="${ROOT%/}/controlroom"
-          lftp -c "
-            set ftp:ssl-force true
-            set ftp:ssl-protect-data true
-            set net:max-retries 2
-            open -u \"$FTP_USER\" --env-password \"$HOST\"
-            mkdir -p -f \"$target\"
-            mirror --reverse --verbose site \"$target\"
-          "
-          echo "Published to https://vandijkcloud.nl/controlroom/"
+      - name: Upload to FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./site/
+          server-dir: /controlroom/
