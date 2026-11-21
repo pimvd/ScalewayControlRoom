@@ -113,15 +113,20 @@ final class AppModel {
     private nonisolated static func list(_ key: APIKey) async -> Listing {
         let api = client(for: key)
         async let instances = listAll(Zone.allCases, quietForbidden: false) { try await api.listServers(zone: $0) }
-        // A key that may not see serverless simply has none.
-        async let apps = listAll(Region.allCases, quietForbidden: true) { try await api.listServerless(region: $0) }
+        // A key that may not see serverless has none; say why only when it may
+        // not anywhere, rather than leave an unexplained empty list.
+        async let apps = listAll(Region.allCases, quietForbidden: true,
+                                 forbiddenEverywhere: "This key may not list serverless apps. Add ContainersReadOnly and FunctionsReadOnly to its policy.") {
+            try await api.listServerless(region: $0)
+        }
         let (i, a) = await (instances, apps)
         return Listing(keyID: key.id, servers: i.items, serversProblem: i.problem, apps: a.items, appsProblem: a.problem)
     }
 
     /// Lists every place in parallel. Places that fail are named in the problem.
     private nonisolated static func listAll<Place: RawRepresentable & Sendable, Item: Sendable>(
-        _ places: [Place], quietForbidden: Bool, _ list: @escaping @Sendable (Place) async throws -> [Item]
+        _ places: [Place], quietForbidden: Bool, forbiddenEverywhere: String? = nil,
+        _ list: @escaping @Sendable (Place) async throws -> [Item]
     ) async -> (items: [Item], problem: String?) where Place.RawValue == String {
         let results = await withTaskGroup(of: (Int, Result<[Item], Error>).self) { group in
             for (index, place) in places.enumerated() {
@@ -135,6 +140,8 @@ final class AppModel {
         }
         var items: [Item] = []
         var failed: [(place: Place, error: Error)] = []
+        var forbidden = 0
+        var offered = places.count
         for (place, result) in zip(places, results) {
             switch result {
             case .success(let found): items += found
@@ -142,10 +149,19 @@ final class AppModel {
                 let apiError = error as? APIError
                 // A region without the product, or a key that may not see it
                 // (where asked), is simply empty.
-                if apiError?.isUnknownService == true || (quietForbidden && apiError?.isForbidden == true) { continue }
+                if apiError?.isUnknownService == true {
+                    offered -= 1
+                    continue
+                }
+                if quietForbidden && apiError?.isForbidden == true {
+                    forbidden += 1
+                    continue
+                }
                 failed.append((place, error))
             }
         }
+        // Every place that offers the product said "may not".
+        if let forbiddenEverywhere, forbidden > 0, forbidden == offered { return (items, forbiddenEverywhere) }
         guard let first = failed.first else { return (items, nil) }
         let message = first.error.localizedDescription
         if failed.count == places.count { return (items, message) }

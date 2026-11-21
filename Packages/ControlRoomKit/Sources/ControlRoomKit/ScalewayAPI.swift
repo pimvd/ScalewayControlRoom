@@ -137,25 +137,49 @@ public struct ScalewayAPI: ScalewayClient {
     }
 
     public func listServerless(region: Region) async throws -> [ServerlessApp] {
-        // Containers and functions carry no project; their namespace does.
-        // Functions can only be listed per namespace.
-        let r = region.rawValue
-        async let containerNamespaces: [APINamespace] = pages("containers/v1/regions/\(r)/namespaces", [:], \.namespaces)
-        async let containers: [APIServerless] = pages("containers/v1/regions/\(r)/containers", [:], \.containers)
-        async let functionNamespaces: [APINamespace] = pages("functions/v1beta1/regions/\(r)/namespaces", [:], \.namespaces)
-        let namespaces = try await (containerNamespaces, functionNamespaces)
-        var functions: [APIServerless] = []
-        for namespace in namespaces.1 {
-            functions += try await pages("functions/v1beta1/regions/\(r)/functions", ["namespace_id": namespace.id], \.functions)
+        // Containers and functions are separate products with separate
+        // permission sets: a key that may see only one of them still lists it.
+        async let containers = attempt { try await serverlessApps(region, .container) }
+        async let functions = attempt { try await serverlessApps(region, .function) }
+        let results = await [containers, functions]
+        let failures = results.compactMap { result -> Error? in
+            if case .failure(let error) = result { return error }
+            return nil
         }
-        let projectOf = Dictionary((namespaces.0 + namespaces.1).map { ($0.id, $0.projectId) },
-                                   uniquingKeysWith: { first, _ in first })
-        func app(_ a: APIServerless, _ kind: ServerlessApp.Kind) -> ServerlessApp {
+        let forbidden = failures.filter { ($0 as? APIError)?.isForbidden == true }
+        // Anything but "may not" is a real problem; "may not" only when neither
+        // product is allowed.
+        if let other = failures.first(where: { ($0 as? APIError)?.isForbidden != true }) { throw other }
+        if forbidden.count == results.count { throw forbidden[0] }
+        return results.flatMap { (try? $0.get()) ?? [] }
+    }
+
+    /// One product's apps in a region, across the key's organization. They
+    /// carry no project; their namespace does. Functions can only be listed
+    /// per namespace.
+    private func serverlessApps(_ region: Region, _ kind: ServerlessApp.Kind) async throws -> [ServerlessApp] {
+        let base = kind == .container ? "containers/v1" : "functions/v1beta1"
+        let path = "\(base)/regions/\(region.rawValue)"
+        let organization = ["organization_id": key.organizationID]
+        let namespaces: [APINamespace] = try await pages("\(path)/namespaces", organization, \.namespaces)
+        var apps: [APIServerless] = []
+        if kind == .container {
+            apps = try await pages("\(path)/containers", organization, \.containers)
+        } else {
+            for namespace in namespaces {
+                apps += try await pages("\(path)/functions", ["namespace_id": namespace.id], \.functions)
+            }
+        }
+        let projectOf = Dictionary(namespaces.map { ($0.id, $0.projectId) }, uniquingKeysWith: { first, _ in first })
+        return apps.map { a in
             ServerlessApp(id: a.id, name: a.name, kind: kind, status: a.status, region: region,
                           projectID: projectOf[a.namespaceId] ?? "", endpoint: a.publicEndpoint ?? a.domainName ?? "",
                           minScale: a.minScale ?? 0, maxScale: a.maxScale ?? 0)
         }
-        return try await containers.map { app($0, .container) } + functions.map { app($0, .function) }
+    }
+
+    private func attempt<T: Sendable>(_ work: () async throws -> T) async -> Result<T, Error> {
+        do { return .success(try await work()) } catch { return .failure(error) }
     }
 
     /// The project's Cockpit data sources of one type in the region: Scaleway's

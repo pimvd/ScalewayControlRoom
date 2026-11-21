@@ -129,6 +129,44 @@ final class ScalewayAPITests: XCTestCase {
         XCTAssertEqual(transport.queries(for: "/functions/v1beta1/regions/fr-par/functions").first?["namespace_id"], "ns-f")
     }
 
+    func testServerlessIsListedForTheKeysOrganization() async throws {
+        let transport = FakeTransport()
+        for path in ["/containers/v1/regions/fr-par/namespaces", "/functions/v1beta1/regions/fr-par/namespaces"] {
+            transport.responses[path] = (200, #"{"namespaces": []}"#)
+        }
+        transport.responses["/containers/v1/regions/fr-par/containers"] = (200, #"{"containers": []}"#)
+        _ = try await ScalewayAPI(key: key, transport: transport).listServerless(region: .frPar)
+        for path in ["/containers/v1/regions/fr-par/namespaces", "/containers/v1/regions/fr-par/containers",
+                     "/functions/v1beta1/regions/fr-par/namespaces"] {
+            XCTAssertEqual(transport.queries(for: path).first?["organization_id"], "org-1", path)
+        }
+    }
+
+    func testAKeyThatMaySeeOnlyContainersStillListsThem() async throws {
+        let transport = FakeTransport()
+        transport.responses["/containers/v1/regions/fr-par/namespaces"] = (200,
+            #"{"namespaces": [{"id": "ns-c", "project_id": "p-c"}]}"#)
+        transport.responses["/containers/v1/regions/fr-par/containers"] = (200,
+            #"{"containers": [{"id": "c1", "name": "api", "status": "ready", "namespace_id": "ns-c"}]}"#)
+        transport.responses["/functions/v1beta1/regions/fr-par/namespaces"] = (403, #"{"message": "insufficient permissions"}"#)
+        let apps = try await ScalewayAPI(key: key, transport: transport).listServerless(region: .frPar)
+        XCTAssertEqual(apps.map(\.id), ["c1"])
+    }
+
+    func testAKeyThatMaySeeNeitherIsForbidden() async {
+        let transport = FakeTransport()
+        for path in ["/containers/v1/regions/fr-par/namespaces", "/containers/v1/regions/fr-par/containers",
+                     "/functions/v1beta1/regions/fr-par/namespaces"] {
+            transport.responses[path] = (403, #"{"message": "insufficient permissions"}"#)
+        }
+        do {
+            _ = try await ScalewayAPI(key: key, transport: transport).listServerless(region: .frPar)
+            XCTFail("expected an error")
+        } catch {
+            XCTAssertEqual((error as? APIError)?.isForbidden, true)
+        }
+    }
+
     func testLogsQueryEveryDataSourceByResourceIDNewestFirst() async throws {
         let transport = FakeTransport()
         transport.responses["/cockpit/v1/regions/fr-par/data-sources"] = (200, """
