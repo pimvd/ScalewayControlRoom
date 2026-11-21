@@ -70,6 +70,7 @@ Pushed by the pipeline from `AppStore/screenshots/en-US/`. See
 
 ## 7. Website
 
-`website/privacy.html` and `website/support.html` are the sources for the two
-store URLs. Publish them by hand to `https://vandijkcloud.nl/controlroom/`
-before submitting, and again after editing them.
+`website/` holds the marketing page and the privacy and support pages behind the
+two store URLs. The Website workflow publishes them to
+`https://vandijkcloud.nl/controlroom/` on every change, using the `FTP_HOST`,
+`FTP_USERNAME` and `FTP_PASSWORD` secrets.
