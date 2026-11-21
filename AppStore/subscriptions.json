@@ -1,0 +1,29 @@
+{
+  "base_territory": "NLD",
+  "group": {
+    "reference_name": "ControlRoom Pro",
+    "name": "ControlRoom Pro"
+  },
+  "products": [
+    {
+      "product_id": "com.pvd.controlroom.pro.monthly",
+      "reference_name": "Pro monthly",
+      "period": "ONE_MONTH",
+      "base_price": "1.99",
+      "name": "Pro, monthly",
+      "description": "Logs, serverless, cost history, more keys",
+      "review_note": "Unlocks Pro: more than one API key, serverless containers and functions with their logs, instance logs, and the cost breakdown and history. Without Pro the app lists instances, starts and stops them, and shows this month's total cost. Use the demo (first screen or Settings) to see every feature without a Scaleway account.",
+      "review_screenshot": "subscriptions/review.png"
+    },
+    {
+      "product_id": "com.pvd.controlroom.pro.yearly",
+      "reference_name": "Pro yearly",
+      "period": "ONE_YEAR",
+      "base_price": "19.99",
+      "name": "Pro, yearly",
+      "description": "Logs, serverless, cost history, more keys",
+      "review_note": "The same Pro features as the monthly subscription, billed yearly. Use the demo (first screen or Settings) to see every feature without a Scaleway account.",
+      "review_screenshot": "subscriptions/review.png"
+    }
+  ]
+}
