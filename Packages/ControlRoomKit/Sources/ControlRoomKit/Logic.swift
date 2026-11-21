@@ -130,6 +130,7 @@ public func metricStep(minutes: Int) -> Int {
 /// A value in the unit its name suggests, per second for counters.
 public func formatMetric(_ value: Double, name: String) -> String {
     let perSecond = isCounter(name) ? "/s" : ""
+    if value == 0 { return "0" + perSecond }
     if name.contains("bytes") {
         var amount = value
         var unit = 0

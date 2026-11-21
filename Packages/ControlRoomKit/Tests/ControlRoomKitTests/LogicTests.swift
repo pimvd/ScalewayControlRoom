@@ -113,6 +113,7 @@ final class LogicTests: XCTestCase {
         XCTAssertEqual(formatMetric(0.354, name: "cpu_usage_ratio"), "35.4%")
         XCTAssertEqual(formatMetric(42.25, name: "http_requests_total"), "42.2/s")
         XCTAssertEqual(formatMetric(2, name: "instances"), "2.0")
+        XCTAssertEqual(formatMetric(0, name: "http_requests_total"), "0/s")
     }
 }
 
