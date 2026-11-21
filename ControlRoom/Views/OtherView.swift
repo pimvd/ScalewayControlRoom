@@ -91,6 +91,7 @@ struct OtherView: View {
 
 struct ResourceDetailView: View {
     @Environment(AppModel.self) private var model
+    @State private var showAll = false
     var id: String
 
     var body: some View {
@@ -107,11 +108,23 @@ struct ResourceDetailView: View {
                     LabeledContent("ID") { Text(resource.id).textSelection(.enabled) }
                     LabeledContent("Seen by", value: listed.keyIDs.map(model.label(of:)).joined(separator: ", "))
                 }
+                let keyFields = resource.details.filter(\.key)
+                if !keyFields.isEmpty {
+                    Section("Details") { ForEach(keyFields, id: \.self, content: row) }
+                }
                 // Global resources have no regional Cockpit to look in.
                 if resource.cockpitTarget != nil {
                     Section {
                         NavigationLink("Metrics", value: Destination.metrics(.resource, resource.id))
                         NavigationLink("Logs", value: Destination.logs(.resource, resource.id))
+                    }
+                }
+                // Everything Scaleway's list says about it, key fields included.
+                if !resource.details.isEmpty {
+                    Section {
+                        DisclosureGroup("All fields (\(resource.details.count))", isExpanded: $showAll) {
+                            ForEach(resource.details, id: \.self, content: row)
+                        }
                     }
                 }
             }
@@ -121,6 +134,12 @@ struct ResourceDetailView: View {
             ProgressView()
         } else {
             ContentUnavailableView("This resource is no longer listed.", systemImage: "square.stack.3d.up")
+        }
+    }
+
+    private func row(_ detail: Detail) -> some View {
+        LabeledContent(detail.label) {
+            Text(detail.value).textSelection(.enabled).multilineTextAlignment(.trailing)
         }
     }
 }

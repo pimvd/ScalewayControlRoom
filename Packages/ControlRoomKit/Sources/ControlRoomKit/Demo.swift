@@ -125,17 +125,62 @@ public enum Demo {
         Consumption(amount: 1.2, category: "Observability", product: "Cockpit", project: "webshop"),
     ]
 
+    /// Read from list items like Scaleway's, as real resources are, so the
+    /// detail screen has its fields.
     static let resources: [Resource] = [
-        Resource(id: "demo-r1", name: "orders-db", type: "Managed Database", status: "ready", location: "fr-par", projectID: "webshop"),
-        Resource(id: "demo-r2", name: "sessions", type: "Redis", status: "ready", location: "fr-par-1", projectID: "webshop"),
-        Resource(id: "demo-r3", name: "uploads", type: "Block volume", status: "in_use", location: "fr-par-1", projectID: "webshop"),
-        Resource(id: "demo-r4", name: "51.15.10.20", type: "Flexible IP", status: "attached", location: "fr-par-1", projectID: "webshop"),
-        Resource(id: "demo-r5", name: "web-lb", type: "Load Balancer", status: "ready", location: "fr-par-1", projectID: "webshop"),
-        Resource(id: "demo-r6", name: "mail.example.com", type: "Transactional Email", status: "checked", location: "fr-par", projectID: "webshop"),
-        Resource(id: "demo-r7", name: "stripe-api-key", type: "Secret", status: "ready", location: "fr-par", projectID: "webshop"),
-        Resource(id: "demo-r8", name: "example.com", type: "DNS zone", status: "active", location: "global", projectID: "webshop"),
-        Resource(id: "demo-r9", name: "metabase-db", type: "Managed Database", status: "ready", location: "fr-par", projectID: "tooling"),
+        resource("Managed Database", "fr-par", """
+            {"id": "demo-r1", "name": "orders-db", "status": "ready", "region": "fr-par", "project_id": "webshop",
+             "engine": "PostgreSQL-16", "node_type": "db-gp-s", "is_ha_cluster": true, "tags": ["prd"],
+             "volume": {"type": "sbs_5k", "size": 50000000000}, "endpoint": {"ip": "51.159.24.110", "port": 5432},
+             "backup_schedule": {"frequency": 24, "retention": 7, "disabled": false},
+             "settings": [{"name": "max_connections", "value": "200"}], "created_at": "2026-03-02T09:12:00Z"}
+            """),
+        resource("Redis", "fr-par-1", """
+            {"id": "demo-r2", "name": "sessions", "status": "ready", "zone": "fr-par-1", "project_id": "webshop",
+             "version": "7.2.5", "node_type": "RED1-S", "cluster_size": 1, "tls_enabled": true,
+             "endpoints": [{"ips": ["10.12.0.4"], "port": 6379}], "created_at": "2026-03-02T09:20:00Z"}
+            """),
+        resource("Block volume", "fr-par-1", """
+            {"id": "demo-r3", "name": "uploads", "status": "in_use", "zone": "fr-par-1", "project_id": "webshop",
+             "type": "sbs_15k", "size": 200000000000, "specs": {"perf_iops": 15000, "class": "sbs"},
+             "created_at": "2026-04-11T14:03:00Z"}
+            """),
+        resource("Flexible IP", "fr-par-1", """
+            {"id": "demo-r4", "address": "51.15.10.20", "state": "attached", "zone": "fr-par-1", "project": "webshop",
+             "reverse": "shop.example.com", "type": "routed_ipv4", "server": {"id": "demo-s1", "name": "web-1"}}
+            """),
+        resource("Load Balancer", "fr-par-1", """
+            {"id": "demo-r5", "name": "web-lb", "status": "ready", "zone": "fr-par-1", "project_id": "webshop",
+             "type": "lb-s", "ip": [{"ip_address": "51.159.30.40", "reverse": "lb.example.com"}],
+             "frontend_count": 2, "backend_count": 1, "ssl_compatibility_level": "ssl_compatibility_level_intermediate"}
+            """),
+        resource("Transactional Email", "fr-par", """
+            {"id": "demo-r6", "name": "mail.example.com", "status": "checked", "region": "fr-par", "project_id": "webshop",
+             "reputation": {"status": "excellent", "score": 98}, "statistics": {"sent_count": 1284, "failed_count": 3},
+             "spf_config": "include:_spf.tem.scaleway.com", "last_valid_at": "2026-11-21T03:40:00Z"}
+            """),
+        resource("Secret", "fr-par", """
+            {"id": "demo-r7", "name": "stripe-api-key", "status": "ready", "region": "fr-par", "project_id": "webshop",
+             "description": "Live key for the checkout API", "type": "opaque", "version_count": 3, "path": "/checkout",
+             "protected": false, "tags": ["prd"], "updated_at": "2026-10-30T16:45:00Z"}
+            """),
+        resource("DNS zone", nil, """
+            {"domain": "example.com", "subdomain": "", "status": "active", "project_id": "webshop",
+             "ns": ["ns0.dom.scw.cloud", "ns1.dom.scw.cloud"], "linked_products": [], "updated_at": "2026-09-14T08:00:00Z"}
+            """),
+        resource("Managed Database", "fr-par", """
+            {"id": "demo-r9", "name": "metabase-db", "status": "ready", "region": "fr-par", "project_id": "tooling",
+             "engine": "PostgreSQL-16", "node_type": "db-dev-s", "is_ha_cluster": false,
+             "volume": {"type": "sbs_5k", "size": 10000000000}, "endpoint": {"ip": "51.159.24.120", "port": 18342},
+             "backup_schedule": {"frequency": 24, "retention": 7, "disabled": false}, "created_at": "2026-05-20T10:00:00Z"}
+            """),
     ]
+
+    private static func resource(_ type: String, _ place: String?, _ json: String) -> Resource {
+        let product = Products.all.first { $0.type == type }!
+        let item = try! JSONDecoder().decode([String: JSONValue].self, from: Data(json.utf8))
+        return Resource(item, product: product, place: place)!
+    }
 
     static let apps: [ServerlessApp] = [
         app("demo-c1", "checkout-api", .container, "webshop", 5),

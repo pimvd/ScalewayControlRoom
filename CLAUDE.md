@@ -87,6 +87,11 @@ Swift package for everything that is not UI.
   with the part that had loaded. Scaleway answers
   bursts with 429: `send` retries, `listResources` keeps 6 in flight. Object
   Storage is missing: buckets need the S3 API and an access key.
+  A resource's detail screen shows every field of its list item (`Detail`,
+  flattened, readable labels and values, IDs left out): the product's
+  `keyFields` in a Details section, all of them in a collapsed "All fields"
+  list. The demo resources are read from Scaleway-like JSON through the same
+  parser.
 - Stop uses `poweroff`, which releases the hypervisor and stops compute
   billing. `stop_in_place` is deliberately not offered.
 - Pro: `ProStore.isPro(keys:)` is the one gate. It is true with an active

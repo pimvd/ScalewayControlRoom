@@ -12,14 +12,18 @@ public struct Resource: Identifiable, Hashable, Sendable {
     /// A zone, a region, or "global".
     public var location: String
     public var projectID: String
+    /// Everything else its list item says, the product's key fields first.
+    public var details: [Detail]
 
-    public init(id: String, name: String, type: String, status: String, location: String, projectID: String) {
+    public init(id: String, name: String, type: String, status: String, location: String, projectID: String,
+                details: [Detail] = []) {
         self.id = id
         self.name = name
         self.type = type
         self.status = status
         self.location = location
         self.projectID = projectID
+        self.details = details
     }
 
     /// The region of a regional or zonal resource; global ones have none.
@@ -42,12 +46,17 @@ public struct Product: Hashable, Sendable {
     /// The list field of the response.
     public var field: String
     public var scope: Scope
+    /// The fields the detail screen shows first, as paths into the list item
+    /// ("endpoint.ip"); a path also takes the fields below it. A field the
+    /// item lacks is simply not shown.
+    public var keyFields: [String]
 
-    public init(_ type: String, _ path: String, _ field: String, _ scope: Scope) {
+    public init(_ type: String, _ path: String, _ field: String, _ scope: Scope, keyFields: [String] = []) {
         self.type = type
         self.path = path
         self.field = field
         self.scope = scope
+        self.keyFields = keyFields
     }
 
     /// Where to ask: every region or zone, or once for a global product.
@@ -69,36 +78,66 @@ public enum Products {
     /// own tabs). Object Storage is missing: buckets are listed through the
     /// S3 API, which needs an access key the app does not have.
     public static let all: [Product] = [
-        Product("Managed Database", "rdb/v1/regions/{place}/instances", "instances", .regional),
-        Product("Redis", "redis/v1/zones/{place}/clusters", "clusters", .zonal),
-        Product("MongoDB", "mongodb/v1/regions/{place}/instances", "instances", .regional),
-        Product("Serverless SQL Database", "serverless-sqldb/v1alpha1/regions/{place}/databases", "databases", .regional),
-        Product("Kafka", "kafka/v1alpha1/regions/{place}/clusters", "clusters", .regional),
-        Product("OpenSearch", "searchdb/v1alpha1/regions/{place}/deployments", "deployments", .regional),
-        Product("Data Warehouse", "datawarehouse/v1beta1/regions/{place}/deployments", "deployments", .regional),
-        Product("Kubernetes", "k8s/v1/regions/{place}/clusters", "clusters", .regional),
-        Product("Elastic Metal", "baremetal/v1/zones/{place}/servers", "servers", .zonal),
-        Product("Apple Silicon", "apple-silicon/v1alpha1/zones/{place}/servers", "servers", .zonal),
-        Product("Inference", "inference/v1/regions/{place}/deployments", "deployments", .regional),
-        Product("Block volume", "block/v1/zones/{place}/volumes", "volumes", .zonal),
-        Product("Block snapshot", "block/v1/zones/{place}/snapshots", "snapshots", .zonal),
-        Product("Local volume", "instance/v1/zones/{place}/volumes", "volumes", .zonal),
-        Product("File Storage", "file/v1alpha1/regions/{place}/filesystems", "filesystems", .regional),
-        Product("Container Registry", "registry/v1/regions/{place}/namespaces", "namespaces", .regional),
-        Product("Load Balancer", "lb/v1/zones/{place}/lbs", "lbs", .zonal),
-        Product("Flexible IP", "instance/v1/zones/{place}/ips", "ips", .zonal),
-        Product("VPC", "vpc/v2/regions/{place}/vpcs", "vpcs", .regional),
-        Product("Private Network", "vpc/v2/regions/{place}/private-networks", "private_networks", .regional),
-        Product("Public Gateway", "vpc-gw/v2/zones/{place}/gateways", "gateways", .zonal),
-        Product("Edge Services", "edge-services/v1beta1/pipelines", "pipelines", .global),
-        Product("DNS zone", "domain/v2beta1/dns-zones", "dns_zones", .global),
-        Product("Domain", "domain/v2beta1/domains", "domains", .global),
-        Product("Transactional Email", "transactional-email/v1alpha1/regions/{place}/domains", "domains", .regional),
-        Product("NATS", "mnq/v1beta1/regions/{place}/nats-accounts", "nats_accounts", .regional),
-        Product("Secret", "secret-manager/v1beta1/regions/{place}/secrets", "secrets", .regional),
-        Product("Key", "key-manager/v1alpha1/regions/{place}/keys", "keys", .regional),
-        Product("IoT Hub", "iot/v1/regions/{place}/hubs", "hubs", .regional),
-        Product("Web Hosting", "webhosting/v1/regions/{place}/hostings", "hostings", .regional),
+        Product("Managed Database", "rdb/v1/regions/{place}/instances", "instances", .regional,
+                keyFields: ["engine", "node_type", "endpoint.ip", "endpoint.port", "volume.size", "is_ha_cluster"]),
+        Product("Redis", "redis/v1/zones/{place}/clusters", "clusters", .zonal,
+                keyFields: ["version", "node_type", "cluster_size", "endpoints.ips", "endpoints.port", "tls_enabled"]),
+        Product("MongoDB", "mongodb/v1/regions/{place}/instances", "instances", .regional,
+                keyFields: ["version", "node_type", "node_amount", "volume.size", "endpoints"]),
+        Product("Serverless SQL Database", "serverless-sqldb/v1alpha1/regions/{place}/databases", "databases", .regional,
+                keyFields: ["endpoint", "cpu_min", "cpu_max"]),
+        Product("Kafka", "kafka/v1alpha1/regions/{place}/clusters", "clusters", .regional,
+                keyFields: ["version", "node_type", "node_amount", "volume.size"]),
+        Product("OpenSearch", "searchdb/v1alpha1/regions/{place}/deployments", "deployments", .regional,
+                keyFields: ["version", "node_type", "node_amount", "volume.size"]),
+        Product("Data Warehouse", "datawarehouse/v1beta1/regions/{place}/deployments", "deployments", .regional,
+                keyFields: ["version", "node_type", "replica_count", "shard_count"]),
+        Product("Kubernetes", "k8s/v1/regions/{place}/clusters", "clusters", .regional,
+                keyFields: ["version", "type", "cni", "cluster_url"]),
+        Product("Elastic Metal", "baremetal/v1/zones/{place}/servers", "servers", .zonal,
+                keyFields: ["offer_name", "ips.address", "domain"]),
+        Product("Apple Silicon", "apple-silicon/v1alpha1/zones/{place}/servers", "servers", .zonal,
+                keyFields: ["type", "ip", "os.name"]),
+        Product("Inference", "inference/v1/regions/{place}/deployments", "deployments", .regional,
+                keyFields: ["model_name", "node_type_name", "endpoints.url", "size"]),
+        Product("Block volume", "block/v1/zones/{place}/volumes", "volumes", .zonal,
+                keyFields: ["size", "type", "specs.perf_iops", "references"]),
+        Product("Block snapshot", "block/v1/zones/{place}/snapshots", "snapshots", .zonal,
+                keyFields: ["size", "parent_volume.name"]),
+        Product("Local volume", "instance/v1/zones/{place}/volumes", "volumes", .zonal,
+                keyFields: ["size", "volume_type", "server.name"]),
+        Product("File Storage", "file/v1alpha1/regions/{place}/filesystems", "filesystems", .regional,
+                keyFields: ["size", "number_of_attachments"]),
+        Product("Container Registry", "registry/v1/regions/{place}/namespaces", "namespaces", .regional,
+                keyFields: ["endpoint", "image_count", "size", "is_public"]),
+        Product("Load Balancer", "lb/v1/zones/{place}/lbs", "lbs", .zonal,
+                keyFields: ["type", "ip.ip_address", "frontend_count", "backend_count"]),
+        Product("Flexible IP", "instance/v1/zones/{place}/ips", "ips", .zonal,
+                keyFields: ["address", "reverse", "server.name", "type"]),
+        Product("VPC", "vpc/v2/regions/{place}/vpcs", "vpcs", .regional,
+                keyFields: ["private_network_count", "is_default", "routing_enabled"]),
+        Product("Private Network", "vpc/v2/regions/{place}/private-networks", "private_networks", .regional,
+                keyFields: ["subnets.subnet", "dhcp_enabled"]),
+        Product("Public Gateway", "vpc-gw/v2/zones/{place}/gateways", "gateways", .zonal,
+                keyFields: ["type", "ipv4.address", "bastion_enabled", "bastion_port"]),
+        Product("Edge Services", "edge-services/v1beta1/pipelines", "pipelines", .global,
+                keyFields: ["description"]),
+        Product("DNS zone", "domain/v2beta1/dns-zones", "dns_zones", .global,
+                keyFields: ["ns", "ns_master", "linked_products"]),
+        Product("Domain", "domain/v2beta1/domains", "domains", .global,
+                keyFields: ["expired_at", "auto_renew_status", "dnssec.status"]),
+        Product("Transactional Email", "transactional-email/v1alpha1/regions/{place}/domains", "domains", .regional,
+                keyFields: ["last_error", "reputation.status", "statistics.sent_count", "statistics.failed_count"]),
+        Product("NATS", "mnq/v1beta1/regions/{place}/nats-accounts", "nats_accounts", .regional,
+                keyFields: ["endpoint"]),
+        Product("Secret", "secret-manager/v1beta1/regions/{place}/secrets", "secrets", .regional,
+                keyFields: ["description", "type", "version_count", "path"]),
+        Product("Key", "key-manager/v1alpha1/regions/{place}/keys", "keys", .regional,
+                keyFields: ["usage", "rotation_policy.next_rotation_at", "protected"]),
+        Product("IoT Hub", "iot/v1/regions/{place}/hubs", "hubs", .regional,
+                keyFields: ["product_plan", "endpoint", "device_count"]),
+        Product("Web Hosting", "webhosting/v1/regions/{place}/hostings", "hostings", .regional,
+                keyFields: ["domain", "offer.name", "platform_hostname"]),
     ]
 }
 
@@ -137,7 +176,129 @@ extension Resource {
                   type: product.type,
                   status: item["status"]?.string ?? item["state"]?.string ?? "",
                   location: item["zone"]?.string ?? item["region"]?.string ?? place ?? "global",
-                  projectID: item["project_id"]?.string ?? item["project"]?.string ?? "")
+                  projectID: item["project_id"]?.string ?? item["project"]?.string ?? "",
+                  details: Detail.all(in: item, keyFields: product.keyFields))
+    }
+}
+
+/// One field of a resource as the detail screen shows it: "Volume size", "10 GB".
+public struct Detail: Hashable, Sendable {
+    public var label: String
+    public var value: String
+    /// One of the product's key fields, shown before the rest.
+    public var key: Bool
+
+    public init(label: String, value: String, key: Bool = false) {
+        self.label = label
+        self.value = value
+        self.key = key
+    }
+
+    /// What the header already shows, wherever it appears.
+    private static let hidden: Set = ["id", "srn", "region", "zone", "organization", "organization_id", "project", "project_id"]
+    /// What the header already shows, at the top of the item.
+    private static let header: Set = ["name", "status", "state"]
+
+    /// Every field of a list item with a value, one line per leaf: nested
+    /// objects and lists of objects are walked ("Endpoints 2 IP"), lists of
+    /// values joined. IDs and empty values are left out. The key fields come
+    /// first in their order, the rest by label.
+    static func all(in item: [String: JSONValue], keyFields: [String]) -> [Detail] {
+        var found: [(path: [String], value: String)] = []
+        func walk(_ value: JSONValue, _ path: [String]) {
+            let last = path.last ?? ""
+            if hidden.contains(last) || last.hasSuffix("_id") { return }
+            switch value {
+            case .object(let object):
+                // A setting: {"name": "max_connections", "value": "100"}.
+                if Set(object.keys) == ["name", "value"], let name = object["name"]?.string {
+                    walk(object["value"]!, path.filter { Int($0) == nil } + [name])
+                    return
+                }
+                for (name, inner) in object { walk(inner, path + [name]) }
+            case .array(let list) where list.contains { $0.object != nil }:
+                if list.count == 1 { walk(list[0], path) }
+                else { for (index, inner) in list.enumerated() { walk(inner, path + [String(index + 1)]) } }
+            case .array(let list):
+                let values = list.compactMap { format($0, name: last) }
+                if !values.isEmpty { found.append((path, values.joined(separator: ", "))) }
+            default:
+                if let text = format(value, name: last) { found.append((path, text)) }
+            }
+        }
+        for (name, value) in item where !header.contains(name) { walk(value, [name]) }
+
+        func rank(_ path: [String]) -> Int? {
+            let field = path.filter { Int($0) == nil }.joined(separator: ".")
+            return keyFields.firstIndex { field == $0 || field.hasPrefix($0 + ".") }
+        }
+        return found
+            .map { (rank: rank($0.path), detail: Detail(label: label($0.path), value: $0.value, key: rank($0.path) != nil)) }
+            .sorted { a, b in
+                switch (a.rank, b.rank) {
+                case let (x?, y?) where x != y: x < y
+                case (_?, nil): true
+                case (nil, _?): false
+                default: a.detail.label.localizedStandardCompare(b.detail.label) == .orderedAscending
+                }
+            }
+            .map(\.detail)
+    }
+
+    private static let words = [
+        "ip": "IP", "ips": "IPs", "ipv4": "IPv4", "ipv6": "IPv6", "ha": "HA", "dns": "DNS", "dnssec": "DNSSEC",
+        "spf": "SPF", "dkim": "DKIM", "dmarc": "DMARC", "mx": "MX", "kms": "KMS", "url": "URL", "ns": "NS",
+        "dhcp": "DHCP", "tls": "TLS", "ssl": "SSL", "ssh": "SSH", "cpu": "CPU", "gpu": "GPU", "api": "API",
+        "cni": "CNI", "vpc": "VPC", "vnc": "VNC", "id": "ID", "os": "OS",
+    ]
+
+    /// "endpoint", "ip" → "Endpoint IP"; "is_ha_cluster" → "HA cluster".
+    static func label(_ path: [String]) -> String {
+        let words = path.flatMap { part -> [String] in
+            var part = part
+            for prefix in ["is_", "has_"] where part.hasPrefix(prefix) { part.removeFirst(prefix.count) }
+            return part.split(separator: "_").map { Self.words[$0.lowercased()] ?? String($0) }
+        }
+        let text = words.joined(separator: " ")
+        return text.prefix(1).uppercased() + text.dropFirst()
+    }
+
+    /// A value as people read it, or nil when there is nothing to show.
+    static func format(_ value: JSONValue, name: String) -> String? {
+        switch value {
+        case .bool(let flag):
+            return flag ? "Yes" : "No"
+        case .number(let number):
+            if name == "size" || name.hasSuffix("_bytes") {
+                return ByteCountFormatter.string(fromByteCount: Int64(number), countStyle: .decimal)
+            }
+            return number == number.rounded() && abs(number) < 1e15 ? String(Int64(number)) : String(number)
+        case .string(let text):
+            if text.isEmpty { return nil }
+            if let date = parseDate(text) { return date.formatted(date: .abbreviated, time: .shortened) }
+            if text.hasSuffix("s"), let seconds = Int(text.dropLast()) { return duration(seconds) }
+            return text
+        default:
+            return nil
+        }
+    }
+
+    private static func parseDate(_ text: String) -> Date? {
+        guard text.count >= 20, text.contains("T") else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: text) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: text)
+    }
+
+    /// Scaleway writes durations as seconds: "31536000s" → "365 days".
+    private static func duration(_ seconds: Int) -> String {
+        for (size, unit) in [(86400, "day"), (3600, "hour"), (60, "minute")] where seconds >= size && seconds % size == 0 {
+            let count = seconds / size
+            return "\(count) \(unit)\(count == 1 ? "" : "s")"
+        }
+        return "\(seconds) seconds"
     }
 }
 

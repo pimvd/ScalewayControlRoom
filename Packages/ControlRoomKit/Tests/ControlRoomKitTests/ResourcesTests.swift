@@ -48,6 +48,62 @@ final class ResourcesTests: XCTestCase {
         XCTAssertNil(found[0].cockpitTarget)
     }
 
+    func testEveryFieldBecomesADetailWithTheKeyFieldsFirst() throws {
+        let item = try JSONDecoder().decode([String: JSONValue].self, from: Data("""
+            {"id": "db1", "name": "psql-prd", "status": "ready", "region": "nl-ams", "project_id": "p1",
+             "organization_id": "o1", "srn": "srn://x", "engine": "PostgreSQL-17", "node_type": "db-dev-s",
+             "is_ha_cluster": false, "tags": ["prd", "terraform"], "upgradable_version": [], "encryption": {"kms_key_id": null},
+             "volume": {"type": "sbs_5k", "size": 10000000000},
+             "endpoint": {"id": "e1", "ip": "51.158.240.184", "port": 8758, "name": null},
+             "endpoints": [{"id": "e2", "ip": "172.16.12.2", "port": 5432,
+                            "private_network": {"private_network_id": "pn1", "service_ip": "172.16.12.2/22", "zone": "nl-ams-1"}},
+                           {"id": "e1", "ip": "51.158.240.184", "port": 8758}],
+             "settings": [{"name": "max_connections", "value": "100"}],
+             "logs_policy": {"max_age_retention": 30}}
+            """.utf8))
+        let product = Products.all.first { $0.type == "Managed Database" }!
+        let details = try XCTUnwrap(Resource(item, product: product, place: "nl-ams")).details
+        let shown = Dictionary(uniqueKeysWithValues: details.map { ($0.label, $0.value) })
+
+        XCTAssertEqual(details.filter(\.key).map(\.label), ["Engine", "Node type", "Endpoint IP", "Endpoint port", "Volume size", "HA cluster"])
+        XCTAssertEqual(shown["Volume size"], "10 GB")
+        XCTAssertEqual(shown["HA cluster"], "No")
+        XCTAssertEqual(shown["Endpoint port"], "8758")
+        XCTAssertEqual(shown["Tags"], "prd, terraform")
+        XCTAssertEqual(shown["Endpoints 1 private network service IP"], "172.16.12.2/22")
+        XCTAssertEqual(shown["Endpoints 2 IP"], "51.158.240.184")
+        XCTAssertEqual(shown["Settings max connections"], "100")
+        XCTAssertEqual(shown["Logs policy max age retention"], "30")
+        // The header already shows these, IDs are noise, empty values say nothing.
+        for hidden in ["ID", "Name", "Status", "Region", "Srn", "Endpoint ID", "Endpoint name", "Upgradable version",
+                       "Encryption kms key ID", "Endpoints 1 private network zone"] {
+            XCTAssertNil(shown[hidden], hidden)
+        }
+        let rest = details.filter { !$0.key }.map(\.label)
+        XCTAssertEqual(rest, rest.sorted { $0.localizedStandardCompare($1) == .orderedAscending })
+    }
+
+    func testDetailValuesAreReadable() throws {
+        let item = try JSONDecoder().decode([String: JSONValue].self, from: Data("""
+            {"id": "k1", "name": "data-protection", "state": "enabled", "region": "nl-ams", "project_id": "p1",
+             "usage": {"symmetric_encryption": "aes_256_gcm"}, "protected": true, "rotation_count": 1,
+             "rotation_policy": {"rotation_period": "31536000s"}, "description": ""}
+            """.utf8))
+        let product = Products.all.first { $0.type == "Key" }!
+        let details = try XCTUnwrap(Resource(item, product: product, place: "nl-ams")).details
+        let shown = Dictionary(uniqueKeysWithValues: details.map { ($0.label, $0.value) })
+        XCTAssertEqual(shown["Usage symmetric encryption"], "aes_256_gcm")
+        XCTAssertEqual(shown["Rotation policy rotation period"], "365 days")
+        XCTAssertEqual(shown["Protected"], "Yes")
+        XCTAssertEqual(shown["Rotation count"], "1")
+        XCTAssertNil(shown["Description"])
+        XCTAssertEqual(details.first?.label, "Usage symmetric encryption")
+    }
+
+    func testDemoResourcesHaveDetails() {
+        XCTAssertTrue(Demo.resources.allSatisfy { !$0.details.isEmpty })
+    }
+
     func testTooManyRequestsAreRetried() async throws {
         final class Flaky: HTTPTransport, @unchecked Sendable {
             var calls = 0
