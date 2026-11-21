@@ -49,6 +49,8 @@ shot 04-logs "/logs?kind=serverless&id=demo-c1"
 shot 05-costs "/costs"
 shot 06-instance-logs "/logs?kind=instance&id=demo-3"
 
+md5 "$out"/*.png
+
 # Identical pictures mean the app never got past one screen (or a system
 # prompt): fail rather than commit them.
 if [ "$(md5 -q "$out"/*.png | sort -u | wc -l)" -ne "$(ls "$out"/*.png | wc -l)" ]; then
