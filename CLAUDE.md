@@ -32,8 +32,8 @@ Swift package for everything that is not UI.
   - `Logic.swift` merge/dedupe, sorting, filters, cost sums, periods,
     formatting, key validation, the rating rule.
   - `Commands.swift` the copyable scw CLI and shell commands of the setup
-    screens. `website/support.html` repeats the key setup commands; keep them
-    in step.
+    screens. `website/support.html` repeats the key setup commands and
+    `docs/instance-logs-and-metrics.md` the Alloy ones; keep them in step.
   - `Resources.swift` the Other tab: `Products.all` (one line per product
     list endpoint, read as plain JSON), `listResources` (a few requests at a
     time), rows and grouping.

@@ -96,6 +96,9 @@ final class LogicTests: XCTestCase {
         XCTAssertTrue(Commands.alloyConfig(for: s).contains(#""${METRICS_URL}/api/v1/push""#))
         // Both writers carry the label the app queries by.
         XCTAssertEqual(Commands.alloyConfig(for: s).components(separatedBy: "resource_id   = ").count, 3)
+        // Grafana's package leaves Alloy disabled: without this it is gone after a reboot.
+        XCTAssertTrue(Commands.alloyConfig(for: s).contains("sudo systemctl enable alloy"))
+        XCTAssertTrue(Commands.alloyConfig(for: s).contains("sudo chmod 640 /etc/alloy/config.alloy"))
     }
 
     func testScreenshotRoutes() {

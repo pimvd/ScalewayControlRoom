@@ -59,6 +59,8 @@ public enum Commands {
     /// On the instance: Alloy config that ships the journal and the basic
     /// system metrics to Cockpit, labelled with the instance's ID so the app
     /// can find them again. Few collectors, once a minute: pushed data is billed.
+    /// The config holds the push key, so only Alloy may read it; Grafana's
+    /// package leaves the service disabled, so it is enabled for reboots.
     public static func alloyConfig(for server: Server) -> String {
         let labels = """
           external_labels = {
@@ -101,6 +103,9 @@ public enum Commands {
         \(labels)
         }
         EOF
+        sudo chown root:alloy /etc/alloy/config.alloy
+        sudo chmod 640 /etc/alloy/config.alloy
+        sudo systemctl enable alloy
         sudo systemctl restart alloy
         """
     }

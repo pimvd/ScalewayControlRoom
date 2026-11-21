@@ -68,7 +68,7 @@ echo &quot;Organization ID: $ORG&quot;</code></pre>
     <li>In the console, open <em>Cockpit → Data sources</em> and create a custom data source of type <em>Logs</em> in the instance's region. Copy its URL.</li>
     <li>Create a separate API key that may push to Cockpit (an IAM application with <code>ObservabilityFullAccess</code>). Do not reuse the key in the app.</li>
     <li>Install <a href="https://grafana.com/docs/alloy/latest/set-up/install/linux/">Grafana Alloy</a> on the instance.</li>
-    <li>Copy the configuration from step 3 in the app: it writes <code>/etc/alloy/config.alloy</code> and restarts Alloy.</li>
+    <li>Copy the configuration from step 3 in the app: it writes <code>/etc/alloy/config.alloy</code>, lets only Alloy read it, and enables and restarts Alloy, so it also starts after a reboot.</li>
   </ol>
   <p>The configuration labels every line with the instance's ID (<code>resource_id</code>), which is how the app finds them. Logs you push yourself are billed by Scaleway as Cockpit custom data.</p>
 
