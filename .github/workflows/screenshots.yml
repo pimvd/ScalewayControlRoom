@@ -46,10 +46,6 @@ jobs:
 
       - run: npm ci
 
-      - uses: ./.github/actions/ccache
-        with:
-          key: simulator
-
       - name: Build for the simulator
         run: |
           npx expo prebuild --platform ios --clean
@@ -63,7 +59,6 @@ jobs:
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             -quiet
-          ccache --show-stats
 
       - name: Take the screenshots
         run: scripts/screenshots.sh

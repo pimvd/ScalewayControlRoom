@@ -30,14 +30,6 @@
           "image": "./assets/icon.png",
           "imageWidth": 120
         }
-      ],
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "ccacheEnabled": true
-          }
-        }
       ]
     ],
     "experiments": {

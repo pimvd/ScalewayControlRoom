@@ -79,15 +79,6 @@ user's API keys, which live in the keychain (`expo-secure-store`).
 - The build number is the git commit count, set by the release workflow through
   the `BUILD_NUMBER` environment variable read in `app.config.ts`.
 
-## Build speed
-
-The iOS workflows compile C, C++ and Objective-C through ccache
-(`.github/actions/ccache`, `ios.ccacheEnabled` in `app.json`), cached between
-runs. CI and Screenshots share the simulator cache (same `-derivedDataPath
-build`), the release has its own for device builds. The first run after a
-dependency change is a full build; `ccache --show-stats` in the log shows the
-hit rate.
-
 ## Checks
 
 `npx tsc --noEmit`, `npm test`, `python3 scripts/validate_metadata.py`. CI runs
