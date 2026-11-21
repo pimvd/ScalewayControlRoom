@@ -53,6 +53,13 @@ jobs:
           "$RUNNER_TEMP/venv/bin/pip" install --quiet pillow
           "$RUNNER_TEMP/venv/bin/python" scripts/flatten_png.py AppStore/screenshots/en-US/*.png
 
+      - name: Keep them as an artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: screenshots
+          path: AppStore/screenshots/en-US/*.png
+          retention-days: 14
+
       - name: Commit them
         run: |
           git config user.name "github-actions[bot]"
@@ -63,5 +70,6 @@ jobs:
             exit 0
           fi
           git commit -m "Update App Store screenshots"
-          git pull --rebase origin "$GITHUB_REF_NAME"
+          # The build leaves generated changes behind; only the pictures are committed.
+          git pull --rebase --autostash origin "$GITHUB_REF_NAME"
           git push origin "HEAD:$GITHUB_REF_NAME"
