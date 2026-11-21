@@ -70,6 +70,10 @@ def main() -> int:
         for key in ("name", "subtitle", "keywords"):
             if FORBIDDEN.search(data.get(key, "")):
                 problems.append(f"{locale}: {key} must not contain 'Control Center' (Apple's)")
+        # A subscription app must link its terms of use and privacy policy.
+        for key in ("terms_url", "privacy_url"):
+            if app.get(key) and app[key] not in data.get("description", ""):
+                problems.append(f"{locale}: description must link {key} ({app[key]})")
         if DISCLAIMER not in data.get("description", ""):
             problems.append(f"{locale}: description must say the app is {DISCLAIMER}")
         unknown = set(data) - set(REQUIRED)

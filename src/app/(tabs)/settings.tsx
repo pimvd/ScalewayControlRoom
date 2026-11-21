@@ -4,10 +4,12 @@ import { Alert, Linking, ScrollView } from 'react-native';
 import { Row, Section, Title, styles } from '@/components/ui';
 import { DEMO_KEY } from '@/lib/demo';
 import { APP_VERSION, PRIVACY_URL, SUPPORT_URL, TERMS_URL } from '@/lib/links';
+import { useProStore } from '@/lib/pro';
 import { useStore } from '@/lib/store';
 
 export default function SettingsScreen() {
   const store = useStore();
+  const pro = useProStore();
   const hasDemo = store.keys.some((k) => k.demo);
 
   const confirmRemove = (id: string, label: string) =>
@@ -33,6 +35,24 @@ export default function SettingsScreen() {
         ))}
         <Row label="Add API key" onPress={() => router.push('/add-key')} last={hasDemo} />
         {hasDemo ? null : <Row label="Try the demo" onPress={() => store.addKey(DEMO_KEY)} last />}
+      </Section>
+
+      <Section
+        title="Pro"
+        footer={
+          !pro.subscribed && pro.isPro ? 'Every Pro feature is open while the demo is your only key.' : undefined
+        }>
+        {pro.subscribed ? (
+          <>
+            <Row label="Status" value="Active" />
+            <Row label="Manage subscription" onPress={pro.manage} last />
+          </>
+        ) : (
+          <>
+            <Row label="Get Pro" onPress={() => router.push('/pro')} />
+            <Row label="Restore purchases" onPress={pro.restore} last />
+          </>
+        )}
       </Section>
 
       <Section title="Help">

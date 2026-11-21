@@ -33,6 +33,11 @@ the iOS keychain and sent only to api.scaleway.com.
 
 ControlRoom is an independent app, not made or endorsed by Scaleway. It uses
 the name only to say which service it works with.
+Pro is an auto-renewing subscription (monthly or yearly). While the demo is the
+only key, every Pro feature is open so the whole app can be reviewed. To test
+the purchase itself, open Settings → Get Pro: it shows both subscriptions with
+their price, Restore purchases, and links to the Terms of Use and Privacy
+Policy. Subscription status is checked with StoreKit on the device.
 <!-- END REVIEW NOTES -->
 
 These details can live in the repository instead: add a `review` block to
@@ -68,22 +73,24 @@ The release workflow's `push_subscriptions` switch creates and updates them
 from `AppStore/subscriptions.json` (`scripts/sync_subscriptions.py`): the
 "ControlRoom Pro" group, the monthly and yearly subscription, their names and
 descriptions, the price in every territory, availability and the review
-screenshot. The product IDs must match `PRO_PRODUCT_IDS` in `src/lib/pro.ts`;
+screenshot. The product IDs must match `PRO_PRODUCTS` in `src/lib/pro.tsx`;
 CI checks that.
 
 By hand, once:
 
 - **Free trial:** each subscription → Subscription Prices → Introductory
   Offers → Free, one week, all territories.
-- **Review screenshot:** a screenshot of the Pro screen in the app, at
-  `AppStore/subscriptions/review.png`. Until it exists the sync skips it, and
+- **Review screenshot:** a screenshot of the Pro screen (Settings → Get Pro)
+  taken in a TestFlight build on an iPhone, where the sandbox shows the prices.
+  The simulator in CI cannot load them. Save it as
+  `AppStore/subscriptions/review.png`; until it exists the sync skips it, and
   App Store Connect will not let the subscriptions be submitted.
 - **First submission:** new subscriptions go to review together with an app
   version. On the version page, under In-App Purchases and Subscriptions, add
   both before submitting.
-- **Description:** once Pro is for sale, the store description must say which
-  features need it, the subscription lengths and prices, and link the terms of
-  use.
+- **Description:** the store description says which features need Pro, how the
+  subscription renews, and links the Terms of Use and Privacy Policy;
+  `scripts/validate_metadata.py` checks the links are there.
 
 ## 6. Screenshots
 

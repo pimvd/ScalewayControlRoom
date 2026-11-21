@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { router } from 'expo-router';
 import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 
 import { Banner, Muted, Row, Section, Title, styles, useColors } from '@/components/ui';
@@ -89,6 +90,11 @@ export default function CostsScreen() {
           {costs && pro ? <Breakdown title={results.length > 1 ? key.label : undefined} costs={costs} /> : null}
         </View>
       ))}
+      {loaded.length > 0 && !pro ? (
+        <Section footer="Costs by category and by project, and the months before, are part of Pro.">
+          <Row label="See the details with Pro" onPress={() => router.push('/pro')} last />
+        </Section>
+      ) : null}
       {loaded.length > 0 ? (
         <Muted>Scaleway updates these figures a few times a day. Your invoice is the final word.</Muted>
       ) : null}

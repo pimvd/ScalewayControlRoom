@@ -2,7 +2,7 @@
 """Checks AppStore/subscriptions.json, the Pro subscriptions the release
 pipeline creates in App Store Connect (scripts/sync_subscriptions.py).
 
-- The product IDs match PRO_PRODUCT_IDS in src/lib/pro.ts, both ways.
+- The product IDs match PRO_PRODUCTS in src/lib/pro.tsx, both ways.
 - Names, descriptions, periods and prices fit App Store Connect's rules.
 
 Run: python3 scripts/validate_subscriptions.py   (exit code 1 on any problem)
@@ -21,9 +21,9 @@ PRICE = re.compile(r"^\d+\.\d{2}$")
 
 
 def app_product_ids(root: Path) -> set[str]:
-    source = (root / "src/lib/pro.ts").read_text(encoding="utf-8")
-    listed = re.search(r"PRO_PRODUCT_IDS = \[([^\]]*)\]", source).group(1)
-    return set(re.findall(r"'([^']+)'", listed))
+    source = (root / "src/lib/pro.tsx").read_text(encoding="utf-8")
+    listed = re.search(r"PRO_PRODUCTS = \[(.*?)\] as const", source, re.DOTALL).group(1)
+    return set(re.findall(r"id: '([^']+)'", listed))
 
 
 def validate(folder: Path, known_ids: set[str]) -> list[str]:

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 
 import { InstanceLogsSetup } from '@/components/instance-logs-setup';
+import { ProGate } from '@/components/pro-gate';
 import { Banner, Muted, styles, useColors } from '@/components/ui';
 import { usePro } from '@/lib/pro';
 import { isForbidden } from '@/lib/scaleway';
@@ -60,7 +61,7 @@ export default function LogsScreen() {
   if (!pro) {
     return (
       <View style={styles.screen}>
-        <Muted>Logs are part of Pro.</Muted>
+        <ProGate>Logs from Cockpit are part of Pro.</ProGate>
       </View>
     );
   }

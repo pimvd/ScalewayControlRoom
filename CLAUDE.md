@@ -20,8 +20,7 @@ user's API keys, which live in the keychain (`expo-secure-store`).
 
 - `src/app/` screens (expo-router): tabs for Instances, Serverless, Costs,
   Settings; `instance/[id]` and `serverless/[id]` details; `logs` (both kinds);
-  `add-key` modal; `demo` (the `controlroom://demo` link that turns the demo on,
-  used for screenshots).
+  `add-key` and `pro` (the purchase screen) modals.
 - `src/components/instance-logs-setup.tsx` the guide shown when an instance has
   no logs. Setup screens show copyable scw CLI and shell commands
   (`src/lib/commands.ts`, `CommandBlock` in `src/components/command.tsx`);
@@ -36,8 +35,13 @@ user's API keys, which live in the keychain (`expo-secure-store`).
   in `logic.test.ts`.
 - `src/lib/store.tsx` React context: keys, merged server list, refresh,
   polling while a server is starting/stopping, actions.
-- `src/lib/pro.ts` the single Pro gate (`usePro`). Everything is unlocked until
-  the subscription ships.
+- `src/lib/pro.tsx` Pro: `ProProvider` reads the active subscription with
+  StoreKit on the device (expo-iap, no backend), buys and restores. `usePro()`
+  is the one gate every Pro feature asks; it is also true while the demo is the
+  only key, so App Review and screenshots see everything. Gates show
+  `ProGate` (`src/components/pro-gate.tsx`), which opens `/pro`.
+  Free: one key, instances with start/stop/reboot, this month's total. Pro:
+  more keys, serverless, logs, cost breakdown and earlier months.
 - `AppStore/`, `scripts/`, `MANUAL_METADATA.md`: the store pipeline, modelled on
   FreeCubeSolver's.
 - `website/`: marketing page, support (also the key setup guide) and privacy.
@@ -45,8 +49,12 @@ user's API keys, which live in the keychain (`expo-secure-store`).
   to `vandijkcloud.nl/Scaleway-ControlRoom/` over FTP.
 - Subscriptions: `AppStore/subscriptions.json` → `scripts/sync_subscriptions.py`
   (App Store Connect client in `scripts/asc.py`, tests in `scripts/tests/`).
-  Product IDs live in `PRO_PRODUCT_IDS` (`src/lib/pro.ts`) and
+  Product IDs live in `PRO_PRODUCTS` (`src/lib/pro.tsx`) and
   `scripts/validate_subscriptions.py` keeps both in step.
+- Screenshots: `scripts/screenshots.sh` launches the simulator build with
+  `-screenshotRoute <path>`; `ScreenshotRoute` in `src/app/_layout.tsx` turns
+  the demo on and opens that screen. Deep links are not used because iOS asks
+  "Open in …?" first. The script fails when two pictures are identical.
 - Workflows: `ci.yml` (every push), `release.yml` (TestFlight, metadata and
   subscriptions, manual), `screenshots.yml` (simulator screenshots, manual, commits them),
   `website.yml` (on website changes and after Screenshots).

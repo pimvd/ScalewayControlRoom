@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Linking, ScrollView, Text, TextInput } from 'react-native';
 
 import { CommandBlock } from '@/components/command';
+import { ProGate } from '@/components/pro-gate';
 import { Banner, Button, Muted, styles, useColors } from '@/components/ui';
 import { keySetupCommands } from '@/lib/commands';
 import { newKeyId, validateKey } from '@/lib/keys';
@@ -73,7 +74,7 @@ export default function AddKeyScreen() {
   if (locked) {
     return (
       <ScrollView contentContainerStyle={styles.screen}>
-        <Muted style={{ fontSize: 17 }}>More than one API key is part of Pro.</Muted>
+        <ProGate>More than one API key is part of Pro.</ProGate>
       </ScrollView>
     );
   }

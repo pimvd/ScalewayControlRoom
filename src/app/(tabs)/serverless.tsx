@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 
+import { ProGate } from '@/components/pro-gate';
 import { Banner, Muted, Title, styles, useColors } from '@/components/ui';
 import type { Listed } from '@/lib/logic';
 import { usePro } from '@/lib/pro';
@@ -17,7 +18,7 @@ export default function ServerlessScreen() {
     return (
       <View style={styles.screen}>
         <Title>Serverless</Title>
-        <Muted>Serverless containers, functions and their logs are part of Pro.</Muted>
+        <ProGate>Your serverless containers and functions, with their logs, are part of Pro.</ProGate>
       </View>
     );
   }
