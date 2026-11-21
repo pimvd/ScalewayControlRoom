@@ -51,9 +51,20 @@ public struct DemoClient: ScalewayClient {
         return Demo.apps.filter { $0.region == region }
     }
 
-    public func logs(target: LogTarget, minutes: Int) async throws -> LogResult {
+    public func logs(target: CockpitTarget, minutes: Int) async throws -> LogResult {
         try await Task.sleep(for: latency)
         return LogResult(sources: 1, lines: Demo.logs(for: target.resourceID, now: Date()))
+    }
+
+    public func metricNames(target: CockpitTarget, minutes: Int) async throws -> MetricNames {
+        try await Task.sleep(for: latency)
+        let hasMetrics = Demo.apps.contains { $0.id == target.resourceID }
+        return MetricNames(sources: 1, names: hasMetrics ? Demo.metricNames : [])
+    }
+
+    public func metric(_ name: String, target: CockpitTarget, minutes: Int) async throws -> [MetricPoint] {
+        try await Task.sleep(for: latency)
+        return Demo.metric(name, minutes: minutes, now: Date())
     }
 }
 
@@ -123,6 +134,27 @@ public enum Demo {
         "GET /api/products?page=2 200 31ms",
         "cache miss for product 8812, loading from database",
     ]
+
+    static let metricNames = ["cpu_usage_ratio", "http_requests_total", "instances", "memory_usage_bytes"]
+
+    /// A plausible day of traffic: a slow wave with some wobble.
+    static func metric(_ name: String, minutes: Int, now: Date) -> [MetricPoint] {
+        let (base, swing): (Double, Double) = switch name {
+        case "cpu_usage_ratio": (0.35, 0.2)
+        case "http_requests_total": (40, 25)
+        case "instances": (2, 1)
+        default: (180_000_000, 60_000_000)
+        }
+        let step = Double(metricStep(minutes: minutes))
+        let count = minutes * 60 / Int(step)
+        return (0...count).map { i in
+            let time = now.addingTimeInterval(-Double(count - i) * step)
+            let phase = time.timeIntervalSince1970 / 3600
+            var value = base + swing * sin(phase / 2) + swing * 0.3 * sin(phase * 7)
+            if name == "instances" { value = value.rounded() }
+            return MetricPoint(time: time, value: max(0, value))
+        }
+    }
 
     /// Serverless apps log; the demo instances do not, so their logs screen
     /// shows how to set that up.

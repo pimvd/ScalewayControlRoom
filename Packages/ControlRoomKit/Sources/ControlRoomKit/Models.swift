@@ -90,9 +90,9 @@ public struct ServerlessApp: Identifiable, Hashable, Sendable {
     }
 }
 
-/// Where Cockpit keeps a resource's logs. Scaleway labels every log line with
-/// the resource's ID, and the instance setup guide asks for the same label.
-public struct LogTarget: Hashable, Sendable {
+/// Where Cockpit keeps a resource's logs and metrics. Scaleway labels its data
+/// with the resource's ID, and the instance setup guide adds the same label.
+public struct CockpitTarget: Hashable, Sendable {
     public var projectID: String
     public var region: Region
     public var resourceID: String
@@ -123,6 +123,28 @@ public struct LogResult: Sendable {
     public init(sources: Int, lines: [LogLine]) {
         self.sources = sources
         self.lines = lines
+    }
+}
+
+public struct MetricPoint: Hashable, Sendable {
+    public var time: Date
+    public var value: Double
+
+    public init(time: Date, value: Double) {
+        self.time = time
+        self.value = value
+    }
+}
+
+public struct MetricNames: Sendable {
+    /// How many metrics data sources the project has in that region.
+    public var sources: Int
+    /// The metrics that have data for the resource, sorted.
+    public var names: [String]
+
+    public init(sources: Int, names: [String]) {
+        self.sources = sources
+        self.names = names
     }
 }
 
@@ -198,7 +220,11 @@ public protocol ScalewayClient: Sendable {
     func hourlyPrices(zone: Zone) async throws -> [String: Double]
     func listServerless(region: Region) async throws -> [ServerlessApp]
     /// The newest lines of the last `minutes`, newest first.
-    func logs(target: LogTarget, minutes: Int) async throws -> LogResult
+    func logs(target: CockpitTarget, minutes: Int) async throws -> LogResult
+    /// Which metrics Cockpit has for the resource in the last `minutes`.
+    func metricNames(target: CockpitTarget, minutes: Int) async throws -> MetricNames
+    /// One metric over the last `minutes`, oldest first (see `metricQuery`).
+    func metric(_ name: String, target: CockpitTarget, minutes: Int) async throws -> [MetricPoint]
 }
 
 public func client(for key: APIKey) -> ScalewayClient {

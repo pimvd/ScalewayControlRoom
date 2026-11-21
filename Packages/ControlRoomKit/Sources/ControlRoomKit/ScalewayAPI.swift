@@ -158,15 +158,20 @@ public struct ScalewayAPI: ScalewayClient {
         return try await containers.map { app($0, .container) } + functions.map { app($0, .function) }
     }
 
-    public func logs(target: LogTarget, minutes: Int) async throws -> LogResult {
-        // Scaleway's own logs and any custom log data source the user pushes to.
+    /// The project's Cockpit data sources of one type in the region: Scaleway's
+    /// own and any custom one the user pushes to.
+    private func dataSources(_ target: CockpitTarget, type: String) async throws -> [URL] {
         let sources: [APIDataSource] = try await pages(
             "cockpit/v1/regions/\(target.region.rawValue)/data-sources",
-            ["project_id": target.projectID, "types": "logs"], \.dataSources)
+            ["project_id": target.projectID, "types": type], \.dataSources)
+        return sources.compactMap { URL(string: $0.url) }
+    }
+
+    public func logs(target: CockpitTarget, minutes: Int) async throws -> LogResult {
+        let sources = try await dataSources(target, type: "logs")
         let now = Int64(Date().timeIntervalSince1970 * 1000)
         var responses: [LokiResponse] = []
-        for source in sources {
-            guard let base = URL(string: source.url) else { continue }
+        for base in sources {
             responses.append(try await send(url("loki/api/v1/query_range", [
                 "query": "{resource_id=\"\(target.resourceID)\"}",
                 "start": "\(now - Int64(minutes) * 60_000)000000",
@@ -176,6 +181,39 @@ public struct ScalewayAPI: ScalewayClient {
             ], base: base)))
         }
         return LogResult(sources: sources.count, lines: Self.logLines(responses))
+    }
+
+    // Metrics data sources speak the Prometheus HTTP API under /prometheus.
+
+    public func metricNames(target: CockpitTarget, minutes: Int) async throws -> MetricNames {
+        let sources = try await dataSources(target, type: "metrics")
+        let now = Int(Date().timeIntervalSince1970)
+        var names = Set<String>()
+        for base in sources {
+            let response: PrometheusNames = try await send(url("prometheus/api/v1/label/__name__/values", [
+                "match[]": "{resource_id=\"\(target.resourceID)\"}",
+                "start": String(now - minutes * 60), "end": String(now),
+            ], base: base))
+            names.formUnion(response.data)
+        }
+        return MetricNames(sources: sources.count, names: names.sorted())
+    }
+
+    public func metric(_ name: String, target: CockpitTarget, minutes: Int) async throws -> [MetricPoint] {
+        let now = Int(Date().timeIntervalSince1970)
+        for base in try await dataSources(target, type: "metrics") {
+            let response: PrometheusMatrix = try await send(url("prometheus/api/v1/query_range", [
+                "query": metricQuery(name, resourceID: target.resourceID),
+                "start": String(now - minutes * 60), "end": String(now),
+                "step": String(metricStep(minutes: minutes)),
+            ], base: base))
+            // The query sums or averages to one series; the first source with
+            // data is the one that has the metric.
+            if let series = response.data.result.first, !series.values.isEmpty {
+                return series.values.map { MetricPoint(time: Date(timeIntervalSince1970: $0.time), value: $0.value) }
+            }
+        }
+        return []
     }
 
     /// Loki's streams merged into one list, newest first.
@@ -283,6 +321,27 @@ struct APIServerless: Decodable {
 
 struct APIDataSource: Decodable {
     var url: String
+}
+
+struct PrometheusNames: Decodable {
+    var data: [String]
+}
+
+struct PrometheusMatrix: Decodable {
+    /// A sample is `[unix time, "value"]`.
+    struct Sample: Decodable {
+        var time: Double
+        var value: Double
+
+        init(from decoder: Decoder) throws {
+            var c = try decoder.unkeyedContainer()
+            time = try c.decode(Double.self)
+            value = Double(try c.decode(String.self)) ?? .nan
+        }
+    }
+    struct Series: Decodable { var values: [Sample] }
+    struct Payload: Decodable { var result: [Series] }
+    var data: Payload
 }
 
 struct LokiResponse: Decodable {

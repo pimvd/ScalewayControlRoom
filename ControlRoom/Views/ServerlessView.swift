@@ -8,7 +8,7 @@ struct ServerlessView: View {
     var body: some View {
         Group {
             if !pro.isPro(keys: model.keys) {
-                ProGate(text: "Your serverless containers and functions, with their logs, are part of Pro.")
+                ProGate(text: "Your serverless containers and functions, with their logs and metrics, are part of Pro.")
             } else {
                 List {
                     ForEach(model.problems.filter { $0.area == .serverless }) { problem in
@@ -59,6 +59,7 @@ struct ServerlessDetailView: View {
                     LabeledContent("Seen by", value: listed.keyIDs.map(model.label(of:)).joined(separator: ", "))
                 }
                 Section {
+                    NavigationLink("Metrics", value: Destination.metrics(.serverless, app.id))
                     NavigationLink("Logs", value: Destination.logs(.serverless, app.id))
                 }
             }

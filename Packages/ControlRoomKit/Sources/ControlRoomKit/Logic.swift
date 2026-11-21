@@ -108,6 +108,44 @@ public func formatMoney(_ amount: Double, currency: String = "EUR") -> String {
     return formatter.string(from: NSNumber(value: amount)) ?? "\(amount)"
 }
 
+// MARK: Metrics
+
+/// Counters only ever go up; what matters is how fast.
+public func isCounter(_ name: String) -> Bool {
+    name.hasSuffix("_total") || name.hasSuffix("_count") || name.hasSuffix("_sum")
+}
+
+/// PromQL for one metric of one resource, summed to a single series: the rate
+/// per second for a counter, the average for anything else.
+public func metricQuery(_ name: String, resourceID: String) -> String {
+    let selector = "\(name){resource_id=\"\(resourceID)\"}"
+    return isCounter(name) ? "sum(rate(\(selector)[5m]))" : "avg(\(selector))"
+}
+
+/// About a hundred points over the period, never closer than 15 seconds.
+public func metricStep(minutes: Int) -> Int {
+    max(15, minutes * 60 / 100)
+}
+
+/// A value in the unit its name suggests, per second for counters.
+public func formatMetric(_ value: Double, name: String) -> String {
+    let perSecond = isCounter(name) ? "/s" : ""
+    if name.contains("bytes") {
+        var amount = value
+        var unit = 0
+        let units = ["B", "KB", "MB", "GB", "TB"]
+        while abs(amount) >= 1000 && unit < units.count - 1 {
+            amount /= 1000
+            unit += 1
+        }
+        return String(format: unit == 0 ? "%.0f" : "%.1f", amount) + " " + units[unit] + perSecond
+    }
+    if name.hasSuffix("_ratio") { return String(format: "%.1f%%", value * 100) }
+    if name.contains("percent") { return String(format: "%.1f%%", value) }
+    let digits = abs(value) >= 100 ? 0 : abs(value) >= 1 ? 1 : 3
+    return String(format: "%.\(digits)f", value) + perSecond
+}
+
 /// Returns what is wrong with an entered key, or nil when it looks right.
 public func validateKey(label: String, secretKey: String, organizationID: String) -> String? {
     let uuid = #/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/#

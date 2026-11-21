@@ -4,6 +4,7 @@ public enum AppTab: String, Hashable, Sendable {
     case instances, serverless, costs, settings
 }
 
+/// Which kind of resource a logs or metrics screen is for.
 public enum LogKind: String, Hashable, Sendable {
     case instance, serverless
 }
@@ -13,6 +14,8 @@ public enum Destination: Hashable, Sendable {
     case instance(String)
     case serverless(String)
     case logs(LogKind, String)
+    case metrics(LogKind, String)
+    case metric(LogKind, String, name: String)
 }
 
 /// Where a screenshot route ("/costs", "/instance/demo-1",
@@ -34,11 +37,17 @@ public func screenshotDestination(_ route: String) -> (tab: AppTab, path: [Desti
         return (.costs, [])
     case "settings":
         return (.settings, [])
-    case "logs":
+    case "logs", "metrics", "metric":
         let id = query["id"] ?? ""
-        return query["kind"] == "serverless"
-            ? (.serverless, [.serverless(id), .logs(.serverless, id)])
-            : (.instances, [.instance(id), .logs(.instance, id)])
+        let kind: LogKind = query["kind"] == "serverless" ? .serverless : .instance
+        let screen: [Destination] = switch parts[0] {
+        case "logs": [.logs(kind, id)]
+        case "metrics": [.metrics(kind, id)]
+        default: [.metrics(kind, id), .metric(kind, id, name: query["name"] ?? "")]
+        }
+        return kind == .serverless
+            ? (.serverless, [.serverless(id)] + screen)
+            : (.instances, [.instance(id)] + screen)
     default:
         return (.instances, [])
     }

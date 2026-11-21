@@ -34,6 +34,28 @@ final class AppModel {
         prices["\(server.zone.rawValue)/\(server.commercialType)"]
     }
 
+    /// Where a resource's logs and metrics are, which keys see it, and the
+    /// server when it is an instance (for the setup guide).
+    struct CockpitResource {
+        var target: CockpitTarget
+        var keyIDs: [String]
+        var server: Server?
+    }
+
+    func cockpitResource(_ kind: LogKind, _ id: String) -> CockpitResource? {
+        switch kind {
+        case .instance:
+            guard let listed = servers.first(where: { $0.id == id }) else { return nil }
+            let server = listed.item
+            return CockpitResource(target: CockpitTarget(projectID: server.project, region: server.zone.region, resourceID: id),
+                                   keyIDs: listed.keyIDs, server: server)
+        case .serverless:
+            guard let listed = serverless.first(where: { $0.id == id }) else { return nil }
+            return CockpitResource(target: CockpitTarget(projectID: listed.item.projectID, region: listed.item.region, resourceID: id),
+                                   keyIDs: listed.keyIDs, server: nil)
+        }
+    }
+
     // MARK: Keys
 
     func load() {

@@ -12,7 +12,7 @@ struct ProView: View {
 
     private static let features = [
         ("Serverless", "Your containers and functions in every region."),
-        ("Logs", "Serverless and instance logs from Cockpit, for the last 15 minutes, hour or day."),
+        ("Logs and metrics", "From Cockpit, for serverless apps and instances: the last 15 minutes, hour or day."),
         ("Cost details", "Costs by category and by project, and the months before."),
         ("More keys", "Every organization and project you work on, side by side."),
     ]

@@ -64,6 +64,29 @@ struct CommandBlock: View {
     }
 }
 
+/// 15 minutes, an hour or a day: the period of a logs or metrics screen.
+struct PeriodPicker: View {
+    @Binding var minutes: Int
+    private static let ranges = [(label: "15 min", minutes: 15), (label: "1 hour", minutes: 60), (label: "24 hours", minutes: 1440)]
+
+    var body: some View {
+        Picker("Period", selection: $minutes) {
+            ForEach(Self.ranges, id: \.minutes) { Text($0.label).tag($0.minutes) }
+        }
+        .pickerStyle(.segmented)
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets())
+    }
+}
+
+/// What to tell the user when Cockpit refuses or fails.
+func cockpitFailure(_ error: Error) -> String {
+    if let error = error as? APIError, error.isForbidden {
+        return "This key may not read Cockpit. Give its application the ObservabilityReadOnly permission set."
+    }
+    return error.localizedDescription
+}
+
 /// Shown in place of a Pro feature: what it is, and the way to get it.
 struct ProGate: View {
     var text: String

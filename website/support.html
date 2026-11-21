@@ -45,7 +45,7 @@ echo &quot;Organization ID: $ORG&quot;</code></pre>
         <li><code>InstancesFullAccess</code> for the projects whose instances you want to start and stop. Use <code>InstancesReadOnly</code> to only look.</li>
         <li><code>BillingReadOnly</code> at organization level, to see costs.</li>
         <li><code>ContainersReadOnly</code> and <code>FunctionsReadOnly</code>, to list serverless containers and functions.</li>
-        <li><code>ObservabilityReadOnly</code>, to read logs from Cockpit.</li>
+        <li><code>ObservabilityReadOnly</code>, to read logs and metrics from Cockpit.</li>
       </ul>
       Leave out what you do not want: the app hides what its key may not do.</li>
     <li>Open the application, choose <em>API keys → Generate API key</em>, and copy the <strong>secret key</strong>. It is shown only once.</li>
@@ -55,15 +55,15 @@ echo &quot;Organization ID: $ORG&quot;</code></pre>
 
   <p>Repeat for each organization. When two keys can see the same instance, the app shows it once and uses whichever key is allowed to start or stop it.</p>
 
-  <h2>Logs</h2>
+  <h2>Logs and metrics</h2>
 
-  <p><strong>Serverless containers and functions</strong> send their logs to Cockpit by themselves: everything they write to standard output and standard error. Open the app in the Serverless tab and tap <em>Logs</em>.</p>
+  <p><strong>Serverless containers and functions</strong> send their logs and metrics to Cockpit by themselves. Open the app in the Serverless tab and tap <em>Logs</em> or <em>Metrics</em>. The app lists every metric Cockpit has for the app and charts the one you tap; counters are shown as a rate per second.</p>
 
-  <p><strong>Instances</strong> do not. An agent on the instance has to push the logs to Cockpit; once it does, they show up in the app. The quickest way: open the instance in the app and tap <em>Logs</em>. It shows three blocks of commands, filled in for that instance, each with a Copy button:</p>
+  <p><strong>Instances</strong> do not. An agent on the instance has to push them to Cockpit; once it does, they show up in the app. The quickest way: open the instance in the app and tap <em>Logs</em> or <em>Metrics</em>. It shows three blocks of commands, filled in for that instance, each with a Copy button:</p>
   <ol>
-    <li>on your computer, with the scw CLI: a custom logs data source in the instance's project and region, and a separate key that may push to it;</li>
+    <li>on your computer, with the scw CLI: custom logs and metrics data sources in the instance's project and region, and a separate key that may push to them;</li>
     <li>on the instance: install Grafana Alloy;</li>
-    <li>on the instance: write the Alloy configuration, with the data source URL and key from step 1, and restart Alloy.</li>
+    <li>on the instance: write the Alloy configuration, with the two URLs and the key from step 1, and restart Alloy. It sends the system journal and basic system metrics (CPU, memory, load, disk, network) once a minute.</li>
   </ol>
   <p>Or by hand in the console:</p>
   <ol>

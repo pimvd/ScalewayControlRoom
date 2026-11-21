@@ -40,6 +40,7 @@ struct InstanceDetailView: View {
                 LabeledContent("Seen by", value: listed.keyIDs.map(model.label(of:)).joined(separator: ", "))
             }
             Section {
+                NavigationLink("Metrics", value: Destination.metrics(.instance, server.id))
                 NavigationLink("Logs", value: Destination.logs(.instance, server.id))
             }
             Section {

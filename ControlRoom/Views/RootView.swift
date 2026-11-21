@@ -67,6 +67,8 @@ private extension View {
             case .instance(let id): InstanceDetailView(id: id)
             case .serverless(let id): ServerlessDetailView(id: id)
             case .logs(let kind, let id): LogsView(kind: kind, id: id)
+            case .metrics(let kind, let id): MetricsView(kind: kind, id: id)
+            case .metric(let kind, let id, let name): MetricChartView(kind: kind, id: id, name: name)
             }
         }
     }

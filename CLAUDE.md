@@ -1,8 +1,8 @@
 # Scaleway ControlRoom
 
 iPhone app (SwiftUI, iOS 17+) that lists Scaleway instances across all zones,
-starts/stops/reboots them, shows serverless apps and their Cockpit logs, and
-shows monthly costs from the Billing API. No backend: the app calls
+starts/stops/reboots them, shows serverless apps with their Cockpit logs and
+metrics, and shows monthly costs from the Billing API. No backend: the app calls
 `api.scaleway.com` with the user's API keys, which live in the keychain.
 
 ## Rules
@@ -61,6 +61,12 @@ Swift package for everything that is not UI.
   queries each one's Loki with `{resource_id="<id>"}`, authenticated with the
   IAM secret key (`X-Auth-Token`). Scaleway labels serverless logs that way;
   the instance guide's Alloy config adds the same label.
+- Metrics: the same data sources of type metrics, through their Prometheus API
+  (`/prometheus/api/v1/...`). Names are not assumed: the app asks Cockpit for
+  the metric names carrying `{resource_id="<id>"}`, lists them, and charts the
+  one tapped (`metricQuery`: rate for counters, average otherwise; Swift
+  Charts). The instance guide's Alloy config pushes basic node metrics with the
+  same label.
 - Serverless: containers (v1) and functions (v1beta1) carry no project; it
   comes from their namespace. Functions can only be listed per namespace. A
   key that may not see serverless (401/403) is left out quietly.
@@ -70,7 +76,8 @@ Swift package for everything that is not UI.
   subscription (StoreKit `Transaction.currentEntitlements`, no server) and
   while the demo is the only key, so App Review and screenshots see
   everything. Free: one key, instances with start/stop/reboot, this month's
-  total. Pro: more keys, serverless, logs, cost breakdown and earlier months.
+  total. Pro: more keys, serverless, logs, metrics, cost breakdown and earlier
+  months.
   The purchase screen is StoreKit's `SubscriptionStoreView`.
 - Rating: after the 3rd, 20th and 60th successful start/stop with a real key
   (never in the demo), via SwiftUI's `requestReview`.

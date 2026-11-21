@@ -27,17 +27,20 @@ public enum Commands {
         """
     }
 
-    /// scw CLI: a custom logs data source in the instance's project and
-    /// region, and a separate key that may push to it.
-    public static func logsSource(for server: Server) -> String {
+    /// scw CLI: custom logs and metrics data sources in the instance's
+    /// project and region, and a separate key that may push to them.
+    public static func cockpitSources(for server: Server) -> String {
         let name = "alloy-\(server.name)"
+        let place = "project-id=\(server.project) region=\(server.zone.region.rawValue)"
         return """
-        DS_URL=$(scw cockpit data-source create name=controlroom-logs type=logs project-id=\(server.project) region=\(server.zone.region.rawValue) -o template="{{ .URL }}")
+        LOGS_URL=$(scw cockpit data-source create name=controlroom-logs type=logs \(place) -o template="{{ .URL }}")
+        METRICS_URL=$(scw cockpit data-source create name=controlroom-metrics type=metrics \(place) -o template="{{ .URL }}")
         APP=$(scw iam application create name=\(name) -o template="{{ .ID }}")
         scw iam policy create name=\(name) application-id=$APP \\
           \(rules("rules.0.project-ids.0=\(server.project)", ["ObservabilityFullAccess"]))
         scw iam api-key create application-id=$APP description=\(name)
-        echo "Data source URL: $DS_URL"
+        echo "Logs URL: $LOGS_URL"
+        echo "Metrics URL: $METRICS_URL"
         """
     }
 
@@ -51,11 +54,19 @@ public enum Commands {
         sudo usermod -aG systemd-journal alloy
         """
 
-    /// On the instance: Alloy config that ships the journal to Cockpit,
-    /// labelled with the instance's ID so the app can find the lines again.
+    /// On the instance: Alloy config that ships the journal and the basic
+    /// system metrics to Cockpit, labelled with the instance's ID so the app
+    /// can find them again. Few collectors, once a minute: pushed data is billed.
     public static func alloyConfig(for server: Server) -> String {
+        let labels = """
+          external_labels = {
+            resource_id   = "\(server.id)",
+            resource_name = "\(server.name)",
+          }
         """
-        DS_URL="paste the data source URL"
+        return """
+        LOGS_URL="paste the logs URL"
+        METRICS_URL="paste the metrics URL"
         PUSH_KEY="paste the secret key"
         sudo tee /etc/alloy/config.alloy > /dev/null <<EOF
         loki.source.journal "system" {
@@ -64,13 +75,28 @@ public enum Commands {
 
         loki.write "cockpit" {
           endpoint {
-            url     = "${DS_URL}/loki/api/v1/push"
+            url     = "${LOGS_URL}/loki/api/v1/push"
             headers = { "X-Auth-Token" = "${PUSH_KEY}" }
           }
-          external_labels = {
-            resource_id   = "\(server.id)",
-            resource_name = "\(server.name)",
+        \(labels)
+        }
+
+        prometheus.exporter.unix "node" {
+          set_collectors = ["cpu", "meminfo", "loadavg", "filesystem", "netdev"]
+        }
+
+        prometheus.scrape "node" {
+          targets         = prometheus.exporter.unix.node.targets
+          scrape_interval = "60s"
+          forward_to      = [prometheus.remote_write.cockpit.receiver]
+        }
+
+        prometheus.remote_write "cockpit" {
+          endpoint {
+            url     = "${METRICS_URL}/api/v1/push"
+            headers = { "X-Auth-Token" = "${PUSH_KEY}" }
           }
+        \(labels)
         }
         EOF
         sudo systemctl restart alloy

@@ -77,9 +77,13 @@ final class LogicTests: XCTestCase {
         for set in Commands.appPermissionSets { XCTAssertTrue(Commands.keySetup.contains(set)) }
         XCTAssertTrue(Commands.keySetup.contains("rules.0.organization-id=$ORG"))
         let s = Server(id: "11111111-2222", name: "web", state: .running, commercialType: "DEV1-S", zone: .nlAms2, project: "p")
-        XCTAssertTrue(Commands.logsSource(for: s).contains("project-id=p region=nl-ams"))
+        XCTAssertTrue(Commands.cockpitSources(for: s).contains("type=logs project-id=p region=nl-ams"))
+        XCTAssertTrue(Commands.cockpitSources(for: s).contains("type=metrics project-id=p region=nl-ams"))
         XCTAssertTrue(Commands.alloyConfig(for: s).contains(#"resource_id   = "11111111-2222""#))
-        XCTAssertTrue(Commands.alloyConfig(for: s).contains(#""${DS_URL}/loki/api/v1/push""#))
+        XCTAssertTrue(Commands.alloyConfig(for: s).contains(#""${LOGS_URL}/loki/api/v1/push""#))
+        XCTAssertTrue(Commands.alloyConfig(for: s).contains(#""${METRICS_URL}/api/v1/push""#))
+        // Both writers carry the label the app queries by.
+        XCTAssertEqual(Commands.alloyConfig(for: s).components(separatedBy: "resource_id   = ").count, 3)
     }
 
     func testScreenshotRoutes() {
@@ -89,6 +93,26 @@ final class LogicTests: XCTestCase {
         let logs = screenshotDestination("/logs?kind=serverless&id=demo-c1")
         XCTAssertEqual(logs.tab, .serverless)
         XCTAssertEqual(logs.path, [.serverless("demo-c1"), .logs(.serverless, "demo-c1")])
+        let metric = screenshotDestination("/metric?kind=serverless&id=demo-c1&name=cpu_usage_ratio")
+        XCTAssertEqual(metric.path, [.serverless("demo-c1"), .metrics(.serverless, "demo-c1"),
+                                     .metric(.serverless, "demo-c1", name: "cpu_usage_ratio")])
+        XCTAssertEqual(screenshotDestination("/metrics?kind=instance&id=demo-3").path,
+                       [.instance("demo-3"), .metrics(.instance, "demo-3")])
+    }
+
+    func testMetricQueriesRateCountersAndAverageTheRest() {
+        XCTAssertEqual(metricQuery("http_requests_total", resourceID: "r"), #"sum(rate(http_requests_total{resource_id="r"}[5m]))"#)
+        XCTAssertEqual(metricQuery("memory_usage_bytes", resourceID: "r"), #"avg(memory_usage_bytes{resource_id="r"})"#)
+        XCTAssertEqual(metricStep(minutes: 15), 15)
+        XCTAssertEqual(metricStep(minutes: 1440), 864)
+    }
+
+    func testMetricValuesUseTheUnitTheirNameSuggests() {
+        XCTAssertEqual(formatMetric(183_400_000, name: "memory_usage_bytes"), "183.4 MB")
+        XCTAssertEqual(formatMetric(512, name: "network_receive_bytes_total"), "512 B/s")
+        XCTAssertEqual(formatMetric(0.354, name: "cpu_usage_ratio"), "35.4%")
+        XCTAssertEqual(formatMetric(42.25, name: "http_requests_total"), "42.2/s")
+        XCTAssertEqual(formatMetric(2, name: "instances"), "2.0")
     }
 }
 
@@ -105,10 +129,20 @@ final class DemoTests: XCTestCase {
         await DemoState.shared.reset()
     }
 
+    func testServerlessAppsHaveMetricsAndInstancesDoNot() async throws {
+        let demo = DemoClient(latency: .zero)
+        let app = try await demo.metricNames(target: CockpitTarget(projectID: "webshop", region: .frPar, resourceID: "demo-c1"), minutes: 60)
+        let instance = try await demo.metricNames(target: CockpitTarget(projectID: "webshop", region: .frPar, resourceID: "demo-3"), minutes: 60)
+        XCTAssertFalse(app.names.isEmpty)
+        XCTAssertTrue(instance.names.isEmpty)
+        let points = try await demo.metric("cpu_usage_ratio", target: CockpitTarget(projectID: "webshop", region: .frPar, resourceID: "demo-c1"), minutes: 60)
+        XCTAssertGreaterThan(points.count, 50)
+    }
+
     func testServerlessAppsHaveLogsAndInstancesDoNot() async throws {
         let demo = DemoClient(latency: .zero)
-        let app = try await demo.logs(target: LogTarget(projectID: "webshop", region: .frPar, resourceID: "demo-c1"), minutes: 60)
-        let instance = try await demo.logs(target: LogTarget(projectID: "webshop", region: .frPar, resourceID: "demo-3"), minutes: 60)
+        let app = try await demo.logs(target: CockpitTarget(projectID: "webshop", region: .frPar, resourceID: "demo-c1"), minutes: 60)
+        let instance = try await demo.logs(target: CockpitTarget(projectID: "webshop", region: .frPar, resourceID: "demo-3"), minutes: 60)
         XCTAssertFalse(app.lines.isEmpty)
         XCTAssertTrue(instance.lines.isEmpty)
     }

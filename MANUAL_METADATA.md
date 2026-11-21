@@ -25,7 +25,7 @@ in: edit them here.
 The app controls servers at the cloud provider Scaleway through the user's own Scaleway API key. You do not need a Scaleway account to review it: on the first screen tap "Try the demo" (also in Settings). The demo shows made-up instances, serverless apps, logs and costs, and nothing is sent anywhere.
 
 - Instances: tap one to see its details. Start, Stop and Reboot work on the demo instances as they would on real servers.
-- Logs: open a serverless app and tap Logs to see its log lines. Open an instance and tap Logs to see the guide for instances that send no logs.
+- Logs and metrics: open a serverless app and tap Logs or Metrics to see its log lines and charts. Open an instance and tap Logs or Metrics to see the guide for instances that send none.
 - Costs: this month's costs, by category and project.
 
 Pro is an auto-renewing subscription, monthly or yearly. While the demo is the only key, every Pro feature is open, so the whole app can be reviewed. To test the purchase, open Settings > Get Pro: it shows both subscriptions with their price, Restore purchases, and links to the Terms of Use and Privacy Policy. The subscription status is checked with StoreKit on the device.
