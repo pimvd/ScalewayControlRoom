@@ -14,25 +14,9 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-
-      - run: npm ci
-
-      - name: Type check
-        run: npx tsc --noEmit
-
-      - name: Tests
-        run: npm test
-
-      - name: Expo dependency versions
-        run: npx expo install --check
 
       - name: App Store metadata and subscriptions
         run: |
@@ -40,12 +24,9 @@ jobs:
           python3 scripts/validate_subscriptions.py
           python3 -m unittest discover -s scripts/tests -t .
 
-  # Proves the native iOS project still compiles. Unsigned, for the simulator,
-  # so it needs no Apple credentials.
   ios:
-    needs: check
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
@@ -53,35 +34,29 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
+      - name: Package tests (ControlRoomKit)
+        working-directory: Packages/ControlRoomKit
+        run: swift test 2>&1 | tee "$RUNNER_TEMP/package-tests.log"
+        shell: bash -o pipefail {0}
 
-      - run: npm ci
-
-      - name: Generate the iOS project
-        run: npx expo prebuild --platform ios --clean
-
-      - name: Build for the simulator
+      # Proves the app compiles. Unsigned, for the simulator, so it needs no
+      # Apple credentials.
+      - name: Build the app for the simulator
         run: |
-          workspace=$(ls -d ios/*.xcworkspace | head -1)
-          scheme=$(basename "$workspace" .xcworkspace)
           xcodebuild build \
-            -workspace "$workspace" \
-            -scheme "$scheme" \
-            -configuration Release \
-            -sdk iphonesimulator \
+            -project ScalewayControlRoom.xcodeproj \
+            -scheme ScalewayControlRoom \
+            -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
             -quiet \
             2>&1 | tee "$RUNNER_TEMP/build.log"
         shell: bash -o pipefail {0}
 
-      - name: Upload the build log
+      - name: Upload the logs
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: ios-build-log
-          path: ${{ runner.temp }}/build.log
+          name: ios-logs
+          path: ${{ runner.temp }}/*.log
           retention-days: 7

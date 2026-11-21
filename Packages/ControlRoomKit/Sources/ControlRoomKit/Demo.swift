@@ -1,0 +1,133 @@
+import Foundation
+
+/// The demo lets App Review, screenshots and curious users try the app
+/// without a Scaleway account. Everything here is made up. State is shared,
+/// so a server stopped on one screen is stopped on all of them.
+public struct DemoClient: ScalewayClient {
+    let latency: Duration
+    let settle: Duration
+
+    public init(latency: Duration = .milliseconds(300), settle: Duration = .seconds(3)) {
+        self.latency = latency
+        self.settle = settle
+    }
+
+    public func listServers(zone: Zone) async throws -> [Server] {
+        try await Task.sleep(for: latency)
+        return await DemoState.shared.servers.filter { $0.zone == zone }
+    }
+
+    public func act(zone: Zone, serverID: String, action: ServerAction) async throws {
+        try await Task.sleep(for: latency)
+        let busy: ServerState = action == .poweroff ? .stopping : .starting
+        let done: ServerState = action == .poweroff ? .stopped : .running
+        await DemoState.shared.set(serverID, busy)
+        let settle = self.settle
+        Task {
+            try? await Task.sleep(for: settle)
+            await DemoState.shared.set(serverID, done)
+        }
+    }
+
+    public func costs(period: String) async throws -> MonthlyCosts {
+        try await Task.sleep(for: latency)
+        // Older months a little different, so the history does not look copied.
+        let month = Int(period.suffix(2)) ?? 1
+        let factor = 1 - Double(month % 3) * 0.08
+        return MonthlyCosts(
+            items: Demo.costs.map {
+                Consumption(amount: ($0.amount * factor * 100).rounded() / 100, category: $0.category,
+                            product: $0.product, project: $0.project)
+            },
+            discount: 0, currency: "EUR")
+    }
+
+    public func hourlyPrices(zone: Zone) async throws -> [String: Double] {
+        Demo.prices
+    }
+
+    public func listServerless(region: Region) async throws -> [ServerlessApp] {
+        try await Task.sleep(for: latency)
+        return Demo.apps.filter { $0.region == region }
+    }
+
+    public func logs(target: LogTarget, minutes: Int) async throws -> LogResult {
+        try await Task.sleep(for: latency)
+        return LogResult(sources: 1, lines: Demo.logs(for: target.resourceID, now: Date()))
+    }
+}
+
+actor DemoState {
+    static let shared = DemoState()
+    var servers = Demo.servers
+
+    func set(_ id: String, _ state: ServerState) {
+        if let index = servers.firstIndex(where: { $0.id == id }) { servers[index].state = state }
+    }
+
+    /// For tests: start from the initial demo state again.
+    func reset() { servers = Demo.servers }
+}
+
+public enum Demo {
+    static let servers: [Server] = [
+        Server(id: "demo-1", name: "web-prod-1", state: .running, commercialType: "PRO2-S", zone: .frPar1,
+               project: "webshop", tags: ["prod"]),
+        Server(id: "demo-2", name: "web-prod-2", state: .running, commercialType: "PRO2-S", zone: .frPar2,
+               project: "webshop", tags: ["prod"]),
+        Server(id: "demo-3", name: "staging", state: .running, commercialType: "DEV1-M", zone: .frPar1,
+               project: "webshop", tags: ["dev"]),
+        Server(id: "demo-4", name: "ci-runner", state: .running, commercialType: "GP1-XS", zone: .nlAms1,
+               project: "tooling", tags: ["dev"]),
+        Server(id: "demo-5", name: "gpu-training", state: .stopped, commercialType: "L4-1-24G", zone: .frPar2,
+               project: "ml", tags: ["dev"]),
+        Server(id: "demo-6", name: "old-wordpress", state: .stopped, commercialType: "DEV1-S", zone: .nlAms1,
+               project: "tooling"),
+    ]
+
+    static let prices: [String: Double] = [
+        "DEV1-S": 0.0109, "DEV1-M": 0.0219, "GP1-XS": 0.091, "PRO2-S": 0.219, "L4-1-24G": 0.75,
+    ]
+
+    static let costs: [Consumption] = [
+        Consumption(amount: 112.4, category: "Compute", product: "Instances PRO2-S", project: "webshop"),
+        Consumption(amount: 11.8, category: "Compute", product: "Instances DEV1-M", project: "webshop"),
+        Consumption(amount: 49.1, category: "Compute", product: "Instances GP1-XS", project: "tooling"),
+        Consumption(amount: 36.0, category: "Compute", product: "Instances L4-1-24G", project: "ml"),
+        Consumption(amount: 8.6, category: "Storage", product: "Block Storage", project: "webshop"),
+        Consumption(amount: 2.3, category: "Storage", product: "Object Storage", project: "tooling"),
+        Consumption(amount: 2.9, category: "Network", product: "Flexible IP", project: "webshop"),
+        Consumption(amount: 1.2, category: "Observability", product: "Cockpit", project: "webshop"),
+    ]
+
+    static let apps: [ServerlessApp] = [
+        app("demo-c1", "checkout-api", .container, "webshop", 5),
+        app("demo-c2", "image-resizer", .container, "webshop", 10),
+        app("demo-f1", "stripe-webhook", .function, "webshop", 3),
+        app("demo-f2", "nightly-report", .function, "tooling", 1),
+    ]
+
+    private static func app(_ id: String, _ name: String, _ kind: ServerlessApp.Kind, _ project: String,
+                            _ maxScale: Int) -> ServerlessApp {
+        ServerlessApp(id: id, name: name, kind: kind, status: "ready", region: .frPar, projectID: project,
+                      endpoint: "\(name)-demo.functions.fnc.fr-par.scw.cloud", minScale: 0, maxScale: maxScale)
+    }
+
+    private static let logLines = [
+        "GET /api/cart 200 18ms",
+        "POST /api/checkout 201 142ms",
+        "GET /api/cart 200 12ms",
+        "payment confirmed for order 10482",
+        "GET /healthz 200 1ms",
+        "POST /api/checkout 402 96ms: card declined",
+        "GET /api/products?page=2 200 31ms",
+        "cache miss for product 8812, loading from database",
+    ]
+
+    /// Serverless apps log; the demo instances do not, so their logs screen
+    /// shows how to set that up.
+    static func logs(for resourceID: String, now: Date) -> [LogLine] {
+        guard apps.contains(where: { $0.id == resourceID }) else { return [] }
+        return (0..<40).map { LogLine(time: now.addingTimeInterval(-47 * Double($0)), line: logLines[$0 % logLines.count]) }
+    }
+}

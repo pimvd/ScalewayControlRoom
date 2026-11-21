@@ -31,7 +31,7 @@ xcrun simctl install "$udid" "$app"
 
 # Every shot starts the app cold with a launch argument naming the screen, which
 # iOS hands to the app as a setting; the app turns the demo on and opens it
-# (ScreenshotRoute in src/app/_layout.tsx). A deep link would stop at iOS's
+# (RootView.start in ControlRoom/Views/RootView.swift). A deep link would stop at iOS's
 # "Open in" prompt.
 mkdir -p "$out"
 rm -f "$out"/*.png

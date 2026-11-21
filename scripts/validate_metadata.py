@@ -80,6 +80,12 @@ def main() -> int:
         if unknown:
             problems.append(f"{locale}: unknown keys {sorted(unknown)}")
 
+    # The app links the same pages as the listing.
+    links = (ROOT.parent / "ControlRoom/Model/Links.swift").read_text(encoding="utf-8")
+    for key in ("privacy_url", "support_url", "terms_url"):
+        if app.get(key) and f'"{app[key]}"' not in links:
+            problems.append(f"ControlRoom/Model/Links.swift does not link {key} ({app[key]})")
+
     for problem in problems:
         print(f"error: {problem}")
     print(f"Checked {len(files)} locale(s): {'OK' if not problems else f'{len(problems)} problem(s)'}")

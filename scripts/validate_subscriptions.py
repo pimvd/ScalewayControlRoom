@@ -2,7 +2,8 @@
 """Checks AppStore/subscriptions.json, the Pro subscriptions the release
 pipeline creates in App Store Connect (scripts/sync_subscriptions.py).
 
-- The product IDs match PRO_PRODUCTS in src/lib/pro.tsx, both ways.
+- The product IDs match ProProducts in the app (ControlRoomKit) and the
+  StoreKit test configuration (StoreKit/ControlRoom.storekit), both ways.
 - Names, descriptions, periods and prices fit App Store Connect's rules.
 
 Run: python3 scripts/validate_subscriptions.py   (exit code 1 on any problem)
@@ -20,10 +21,20 @@ PERIODS = {"ONE_WEEK", "ONE_MONTH", "TWO_MONTHS", "THREE_MONTHS", "SIX_MONTHS", 
 PRICE = re.compile(r"^\d+\.\d{2}$")
 
 
+APP_SOURCE = "Packages/ControlRoomKit/Sources/ControlRoomKit/Navigation.swift"
+STOREKIT = "StoreKit/ControlRoom.storekit"
+
+
 def app_product_ids(root: Path) -> set[str]:
-    source = (root / "src/lib/pro.tsx").read_text(encoding="utf-8")
-    listed = re.search(r"PRO_PRODUCTS = \[(.*?)\] as const", source, re.DOTALL).group(1)
-    return set(re.findall(r"id: '([^']+)'", listed))
+    """The IDs in `enum ProProducts`: its `static let x = "..."` strings."""
+    source = (root / APP_SOURCE).read_text(encoding="utf-8")
+    enum = re.search(r"enum ProProducts \{(.*?)\n\}", source, re.DOTALL).group(1)
+    return set(re.findall(r'static let \w+ = "([\w.]+)"', enum))
+
+
+def storekit_product_ids(root: Path) -> set[str]:
+    config = json.loads((root / STOREKIT).read_text(encoding="utf-8"))
+    return {s["productID"] for group in config["subscriptionGroups"] for s in group["subscriptions"]}
 
 
 def validate(folder: Path, known_ids: set[str]) -> list[str]:
@@ -62,6 +73,9 @@ def validate(folder: Path, known_ids: set[str]) -> list[str]:
 def main() -> int:
     known = app_product_ids(ROOT)
     problems = validate(ROOT / "AppStore", known)
+    storekit = storekit_product_ids(ROOT)
+    if storekit != known:
+        problems.append(f"{STOREKIT} sells {sorted(storekit)}, the app {sorted(known)}")
     for problem in problems:
         print(f"error: {problem}")
     print(f"Checked {len(known)} subscription(s): {'OK' if not problems else f'{len(problems)} problem(s)'}")

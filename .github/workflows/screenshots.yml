@@ -15,7 +15,7 @@ concurrency:
 jobs:
   screenshots:
     runs-on: macos-26
-    timeout-minutes: 75
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
 
@@ -39,23 +39,14 @@ jobs:
           echo "SIMULATOR_UDID=$udid" >> "$GITHUB_ENV"
           xcrun simctl boot "$udid"
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-
-      - run: npm ci
-
       # Signed "to run locally" (ad hoc), as Xcode does for the simulator: an
       # unsigned app cannot use the keychain, where the app keeps its keys,
       # demo included.
       - name: Build for the simulator
         run: |
-          npx expo prebuild --platform ios --clean
-          workspace=$(ls -d ios/*.xcworkspace | head -1)
           xcodebuild build \
-            -workspace "$workspace" \
-            -scheme "$(basename "$workspace" .xcworkspace)" \
+            -project ScalewayControlRoom.xcodeproj \
+            -scheme ScalewayControlRoom \
             -configuration Release \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \

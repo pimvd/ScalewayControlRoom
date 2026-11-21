@@ -73,16 +73,16 @@ The release workflow's `push_subscriptions` switch creates and updates them
 from `AppStore/subscriptions.json` (`scripts/sync_subscriptions.py`): the
 "ControlRoom Pro" group, the monthly and yearly subscription, their names and
 descriptions, the price in every territory, availability and the review
-screenshot. The product IDs must match `PRO_PRODUCTS` in `src/lib/pro.tsx`;
-CI checks that.
+screenshot. The product IDs must match `ProProducts` in
+`Packages/ControlRoomKit` and `StoreKit/ControlRoom.storekit`; CI checks that.
 
 By hand, once:
 
 - **Free trial:** each subscription → Subscription Prices → Introductory
   Offers → Free, one week, all territories.
-- **Review screenshot:** a screenshot of the Pro screen (Settings → Get Pro)
-  taken in a TestFlight build on an iPhone, where the sandbox shows the prices.
-  The simulator in CI cannot load them. Save it as
+- **Review screenshot:** a screenshot of the Pro screen (Settings → Get Pro).
+  Running from Xcode in the simulator shows real-looking prices from
+  `StoreKit/ControlRoom.storekit`; a TestFlight build shows the sandbox ones. Save it as
   `AppStore/subscriptions/review.png`; until it exists the sync skips it, and
   App Store Connect will not let the subscriptions be submitted.
 - **First submission:** new subscriptions go to review together with an app

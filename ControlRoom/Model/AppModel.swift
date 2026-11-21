@@ -1,0 +1,180 @@
+import ControlRoomKit
+import Foundation
+
+struct KeyProblem: Identifiable, Hashable {
+    enum Area { case instances, serverless }
+    var keyID: String
+    var area: Area
+    var message: String
+    var id: String { "\(keyID)-\(area)" }
+}
+
+/// The app's state: the keys, what they can see, and the actions on it.
+@MainActor
+@Observable
+final class AppModel {
+    private(set) var keys: [APIKey] = []
+    private(set) var loaded = false
+    private(set) var servers: [Listed<Server>] = []
+    private(set) var serverless: [Listed<ServerlessApp>] = []
+    private(set) var problems: [KeyProblem] = []
+    /// "zone/commercialType" → price per hour.
+    private(set) var prices: [String: Double] = [:]
+    private(set) var refreshing = false
+
+    private let store = KeyStore()
+    private var pricedZones = Set<Zone>()
+    private var poll: Task<Void, Never>?
+
+    func label(of keyID: String) -> String {
+        keys.first { $0.id == keyID }?.label ?? ""
+    }
+
+    func price(of server: Server) -> Double? {
+        prices["\(server.zone.rawValue)/\(server.commercialType)"]
+    }
+
+    // MARK: Keys
+
+    func load() {
+        keys = (try? store.load()) ?? []
+        loaded = true
+    }
+
+    func add(_ key: APIKey) async throws {
+        let next = keys.filter { $0.id != key.id } + [key]
+        try store.save(next)
+        keys = next
+        await refresh()
+    }
+
+    func remove(_ key: APIKey) async {
+        let next = keys.filter { $0.id != key.id }
+        try? store.save(next, removed: [key])
+        keys = next
+        await refresh()
+    }
+
+    // MARK: Listing
+
+    private struct Listing: Sendable {
+        var keyID: String
+        var servers: [Server]
+        var serversProblem: String?
+        var apps: [ServerlessApp]
+        var appsProblem: String?
+    }
+
+    func refresh() async {
+        guard !refreshing else { return }
+        refreshing = true
+        defer { refreshing = false }
+        let current = keys
+        let listings = await withTaskGroup(of: Listing.self) { group in
+            for key in current { group.addTask { await Self.list(key) } }
+            var all: [String: Listing] = [:]
+            for await listing in group { all[listing.keyID] = listing }
+            return current.compactMap { all[$0.id] }
+        }
+        servers = sortServers(mergeByID(listings.map { (keyID: $0.keyID, items: $0.servers) }))
+        serverless = mergeByID(listings.map { (keyID: $0.keyID, items: $0.apps) })
+            .sorted { $0.item.name.localizedStandardCompare($1.item.name) == .orderedAscending }
+        problems = listings.flatMap { listing in
+            [listing.serversProblem.map { KeyProblem(keyID: listing.keyID, area: .instances, message: $0) },
+             listing.appsProblem.map { KeyProblem(keyID: listing.keyID, area: .serverless, message: $0) }]
+                .compactMap { $0 }
+        }
+        loadPrices()
+        pollWhileBusy()
+    }
+
+    private nonisolated static func list(_ key: APIKey) async -> Listing {
+        let api = client(for: key)
+        async let instances = listAll(Zone.allCases, quietForbidden: false) { try await api.listServers(zone: $0) }
+        // A key that may not see serverless simply has none.
+        async let apps = listAll(Region.allCases, quietForbidden: true) { try await api.listServerless(region: $0) }
+        let (i, a) = await (instances, apps)
+        return Listing(keyID: key.id, servers: i.items, serversProblem: i.problem, apps: a.items, appsProblem: a.problem)
+    }
+
+    /// Lists every place in parallel. Places that fail are named in the problem.
+    private nonisolated static func listAll<Place: RawRepresentable & Sendable, Item: Sendable>(
+        _ places: [Place], quietForbidden: Bool, _ list: @escaping @Sendable (Place) async throws -> [Item]
+    ) async -> (items: [Item], problem: String?) where Place.RawValue == String {
+        let results = await withTaskGroup(of: (Int, Result<[Item], Error>).self) { group in
+            for (index, place) in places.enumerated() {
+                group.addTask {
+                    do { return (index, .success(try await list(place))) } catch { return (index, .failure(error)) }
+                }
+            }
+            var all = [Result<[Item], Error>?](repeating: nil, count: places.count)
+            for await (index, result) in group { all[index] = result }
+            return all.compactMap { $0 }
+        }
+        var items: [Item] = []
+        var failed: [(place: Place, error: Error)] = []
+        for (place, result) in zip(places, results) {
+            switch result {
+            case .success(let found): items += found
+            case .failure(let error):
+                if !(quietForbidden && (error as? APIError)?.isForbidden == true) { failed.append((place, error)) }
+            }
+        }
+        guard let first = failed.first else { return (items, nil) }
+        let message = first.error.localizedDescription
+        if failed.count == places.count { return (items, message) }
+        return (items, "Could not load \(failed.map(\.place.rawValue).joined(separator: ", ")): \(message)")
+    }
+
+    /// Prices never change while the app runs: fetch each zone once.
+    private func loadPrices() {
+        for listed in servers where !pricedZones.contains(listed.item.zone) {
+            let zone = listed.item.zone
+            pricedZones.insert(zone)
+            Task {
+                if let zonePrices = try? await withKeys(listed.keyIDs, { try await $0.hourlyPrices(zone: zone) }) {
+                    for (type, price) in zonePrices { prices["\(zone.rawValue)/\(type)"] = price }
+                } else {
+                    pricedZones.remove(zone)
+                }
+            }
+        }
+    }
+
+    /// While a server is starting or stopping, keep checking until it settles.
+    private func pollWhileBusy() {
+        poll?.cancel()
+        guard servers.contains(where: { $0.item.state.isBusy }) else { return }
+        poll = Task {
+            try? await Task.sleep(for: .seconds(4))
+            if !Task.isCancelled { await refresh() }
+        }
+    }
+
+    // MARK: Actions
+
+    /// Runs `call` with the first of `keyIDs` that is allowed to: a read-only
+    /// key next to a full one for the same resource is not a reason to fail.
+    func withKeys<T: Sendable>(_ keyIDs: [String], _ call: @Sendable (ScalewayClient) async throws -> T) async throws -> T {
+        var lastError: Error = APIError(status: 0, message: "No key can reach this resource.")
+        for id in keyIDs {
+            guard let key = keys.first(where: { $0.id == id }) else { continue }
+            do {
+                return try await call(client(for: key))
+            } catch {
+                lastError = error
+                if (error as? APIError)?.isForbidden != true { break }
+            }
+        }
+        throw lastError
+    }
+
+    func act(_ listed: Listed<Server>, _ action: ServerAction) async throws {
+        let server = listed.item
+        try await withKeys(listed.keyIDs) { try await $0.act(zone: server.zone, serverID: server.id, action: action) }
+        if action != .reboot, let index = servers.firstIndex(where: { $0.id == server.id }) {
+            servers[index].item.state = action == .poweroff ? .stopping : .starting
+        }
+        await refresh()
+    }
+}

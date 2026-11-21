@@ -1,0 +1,77 @@
+{
+  "identifier": "5C0A7E21",
+  "nonRenewingSubscriptions": [],
+  "products": [],
+  "settings": {
+    "_applicationInternalID": "SCWCONTROLROOM",
+    "_developerTeamID": "",
+    "_lastSynchronizedDate": 0
+  },
+  "subscriptionGroups": [
+    {
+      "id": "21600001",
+      "localizations": [],
+      "name": "ControlRoom Pro",
+      "subscriptions": [
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "winbackOffers": [],
+          "displayPrice": "1.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "6740000100",
+          "introductoryOffer": {
+            "internalID": "6740000200",
+            "numberOfPeriods": 1,
+            "paymentMode": "free",
+            "subscriptionPeriod": "P1W"
+          },
+          "localizations": [
+            {
+              "description": "Logs, serverless, cost history, more keys",
+              "displayName": "Pro, monthly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "com.pvd.scwcontrolroom.pro.monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Pro monthly",
+          "subscriptionGroupID": "21600001",
+          "type": "RecurringSubscription"
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "winbackOffers": [],
+          "displayPrice": "19.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "6740000101",
+          "introductoryOffer": {
+            "internalID": "6740000201",
+            "numberOfPeriods": 1,
+            "paymentMode": "free",
+            "subscriptionPeriod": "P1W"
+          },
+          "localizations": [
+            {
+              "description": "Logs, serverless, cost history, more keys",
+              "displayName": "Pro, yearly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "com.pvd.scwcontrolroom.pro.yearly",
+          "recurringSubscriptionPeriod": "P1Y",
+          "referenceName": "Pro yearly",
+          "subscriptionGroupID": "21600001",
+          "type": "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}

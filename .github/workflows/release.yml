@@ -35,7 +35,7 @@ concurrency:
 jobs:
   testflight:
     runs-on: macos-26
-    timeout-minutes: 90
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
         with:
@@ -92,35 +92,22 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-
-      - run: npm ci
-
-      - name: Tests
+      - name: Package tests (ControlRoomKit)
         if: inputs.upload_build
-        run: |
-          npx tsc --noEmit
-          npm test
-
-      - name: Generate the iOS project
-        if: inputs.upload_build
-        run: |
-          number=$(git rev-list --count HEAD)
-          echo "Building as build $number"
-          echo "BUILD_NUMBER=$number" >> "$GITHUB_ENV"
-          BUILD_NUMBER=$number npx expo prebuild --platform ios --clean
+        working-directory: Packages/ControlRoomKit
+        run: swift test
 
       - name: Archive
         if: inputs.upload_build
         run: |
-          workspace=$(ls -d ios/*.xcworkspace | head -1)
-          scheme=$(basename "$workspace" .xcworkspace)
+          # The build number is the commit count, so every upload is unique
+          # and increasing. A shallow clone would report 1.
+          number=$(git rev-list --count HEAD)
+          echo "Building as build $number"
+          echo "BUILD_NUMBER=$number" >> "$GITHUB_ENV"
           xcodebuild archive \
-            -workspace "$workspace" \
-            -scheme "$scheme" \
+            -project ScalewayControlRoom.xcodeproj \
+            -scheme ScalewayControlRoom \
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/app.xcarchive" \
@@ -128,6 +115,7 @@ jobs:
             -authenticationKeyPath "$ASC_KEY_PATH" \
             -authenticationKeyID "${{ secrets.ASC_KEY_ID }}" \
             -authenticationKeyIssuerID "${{ secrets.ASC_ISSUER_ID }}" \
+            CURRENT_PROJECT_VERSION="$number" \
             2>&1 | tee "$RUNNER_TEMP/archive.log"
         shell: bash -o pipefail {0}
 
@@ -173,7 +161,7 @@ jobs:
               "in_house": False,
           }))
           PYTHON
-          version=$(node -p "require('./app.json').expo.version")
+          version=$(grep -m1 MARKETING_VERSION ScalewayControlRoom.xcodeproj/project.pbxproj | sed 's/.*= *//; s/;//')
           bundle_id=$(python3 -c "import json; print(json.load(open('AppStore/app.json'))['bundle_id'])")
           echo "Pushing metadata for $bundle_id version $version"
           # No pictures committed yet? Then leave App Store Connect's alone

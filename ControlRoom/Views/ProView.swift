@@ -1,0 +1,62 @@
+import ControlRoomKit
+import StoreKit
+import SwiftUI
+
+/// The purchase screen. StoreKit's own subscription view shows the prices,
+/// any free trial, the renewal terms and Restore purchases; the links to the
+/// terms of use and privacy policy are ours.
+struct ProView: View {
+    @Environment(ProStore.self) private var pro
+    @Environment(\.dismiss) private var dismiss
+    @State private var showManage = false
+
+    private static let features = [
+        ("Serverless", "Your containers and functions in every region."),
+        ("Logs", "Serverless and instance logs from Cockpit, for the last 15 minutes, hour or day."),
+        ("Cost details", "Costs by category and by project, and the months before."),
+        ("More keys", "Every organization and project you work on, side by side."),
+    ]
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if pro.subscribed {
+                    VStack(spacing: 16) {
+                        Image(systemName: "checkmark.seal.fill").font(.system(size: 56)).foregroundStyle(.tint)
+                        Text("You have Pro. Thank you!").font(.title3)
+                        Button("Manage subscription") { showManage = true }
+                    }
+                } else {
+                    SubscriptionStoreView(productIDs: ProProducts.all) { marketing }
+                        .storeButton(.visible, for: .restorePurchases)
+                        .subscriptionStorePolicyDestination(url: Links.terms, for: .termsOfService)
+                        .subscriptionStorePolicyDestination(url: Links.privacy, for: .privacyPolicy)
+                        .onInAppPurchaseCompletion { _, _ in await pro.check() }
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+            }
+            .manageSubscriptionsSheet(isPresented: $showManage)
+        }
+    }
+
+    private var marketing: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("ControlRoom Pro").font(.largeTitle.bold())
+            Text("Free: your instances, starting and stopping them, and this month's total cost. Pro adds:")
+                .foregroundStyle(.secondary)
+            ForEach(Self.features, id: \.0) { title, text in
+                Label {
+                    VStack(alignment: .leading) {
+                        Text(title).font(.headline)
+                        Text(text).font(.subheadline).foregroundStyle(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "checkmark").foregroundStyle(.tint)
+                }
+            }
+        }
+        .padding()
+    }
+}
