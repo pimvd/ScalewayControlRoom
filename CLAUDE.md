@@ -93,6 +93,13 @@ Swift package for everything that is not UI.
 `screenshots.yml` (simulator screenshots, manual, commits them),
 `website.yml` (on website changes and after Screenshots).
 
+## Xcode
+
+The macOS jobs run on GitHub's `xcode-27` runner image (one major Xcode
+version per image, arm64), so builds use the iOS 27 SDK that App Store Connect
+requires from April 2027. Move to the next `xcode-NN` label when Apple raises
+the minimum again.
+
 ## Checks
 
 `swift test` in `Packages/ControlRoomKit`, `python3 scripts/validate_metadata.py`,

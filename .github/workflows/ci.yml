@@ -25,7 +25,7 @@ jobs:
           python3 -m unittest discover -s scripts/tests -t .
 
   ios:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
