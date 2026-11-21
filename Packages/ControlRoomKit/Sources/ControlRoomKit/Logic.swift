@@ -110,16 +110,40 @@ public func formatMoney(_ amount: Double, currency: String = "EUR") -> String {
 
 // MARK: Metrics
 
-/// Counters only ever go up; what matters is how fast.
+/// Counters only ever go up; what matters is how fast. Cockpit does not say
+/// which metrics are counters, so the name tells, except that Scaleway's
+/// `serverless_container_instances_total` is a count of instances.
 public func isCounter(_ name: String) -> Bool {
-    name.hasSuffix("_total") || name.hasSuffix("_count") || name.hasSuffix("_sum")
+    guard !name.hasSuffix("instances_total") else { return false }
+    return name.hasSuffix("_total") || name.hasSuffix("_count") || name.hasSuffix("_sum")
 }
 
-/// PromQL for one metric of one resource, summed to a single series: the rate
+/// PromQL for one metric of one resource, one series per instance: the rate
 /// per second for a counter, the average for anything else.
 public func metricQuery(_ name: String, selector: String) -> String {
     let selector = name + selector
-    return isCounter(name) ? "sum(rate(\(selector)[5m]))" : "avg(\(selector))"
+    return isCounter(name) ? "sum by (resource_instance) (rate(\(selector)[5m]))" : "avg by (resource_instance) (\(selector))"
+}
+
+/// Metrics worth a chart: `_info` metrics, and Scaleway's serverless
+/// `_status`, carry their meaning in labels and are always 1.
+public func isChartable(_ name: String) -> Bool {
+    !name.hasSuffix("_info") && !(name.hasPrefix("serverless_") && name.hasSuffix("_status"))
+}
+
+/// A readable title: "serverless_container_cpu_usage_ratio" → "CPU usage".
+/// The value already shows the unit, so "bytes" goes where enough is left.
+public func metricTitle(_ name: String) -> String {
+    var words = name.replacing(#/^serverless_(container|function|job)_/#, with: "").split(separator: "_").map(String.init)
+    if words.count > 1, ["total", "ratio"].contains(words.last) { words.removeLast() }
+    if words.count > 2, words.last == "bytes" { words.removeLast() }
+    let title = words.map { ["cpu", "http"].contains($0) ? $0.uppercased() : $0 }.joined(separator: " ")
+    return title.prefix(1).uppercased() + title.dropFirst()
+}
+
+/// Instances are named after their deployment; the last part tells them apart.
+public func instanceLabel(_ instance: String) -> String {
+    instance.split(separator: "-").last.map(String.init) ?? instance
 }
 
 /// About a hundred points over the period, never closer than 15 seconds.
@@ -141,6 +165,8 @@ public func formatMetric(_ value: Double, name: String) -> String {
         }
         return String(format: unit == 0 ? "%.0f" : "%.1f", amount) + " " + units[unit] + perSecond
     }
+    // Scaleway's serverless CPU "ratio" is a percentage already.
+    if name.hasPrefix("serverless_") && name.hasSuffix("cpu_usage_ratio") { return String(format: "%.1f%%", value) }
     if name.hasSuffix("_ratio") { return String(format: "%.1f%%", value * 100) }
     if name.contains("percent") { return String(format: "%.1f%%", value) }
     let digits = abs(value) >= 100 ? 0 : abs(value) >= 1 ? 1 : 3

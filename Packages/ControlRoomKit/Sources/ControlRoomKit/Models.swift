@@ -152,6 +152,19 @@ public struct MetricPoint: Hashable, Sendable {
     }
 }
 
+/// One line of a chart: a metric of one instance of the resource.
+public struct MetricSeries: Hashable, Sendable {
+    /// Cockpit's `resource_instance`; empty when the metric is for the
+    /// resource as a whole.
+    public var instance: String
+    public var points: [MetricPoint]
+
+    public init(instance: String, points: [MetricPoint]) {
+        self.instance = instance
+        self.points = points
+    }
+}
+
 public struct MetricNames: Sendable {
     /// How many metrics data sources the project has in that region.
     public var sources: Int
@@ -243,7 +256,8 @@ public protocol ScalewayClient: Sendable {
     /// Which metrics Cockpit has for the resource in the last `minutes`.
     func metricNames(target: CockpitTarget, minutes: Int) async throws -> MetricNames
     /// One metric over the last `minutes`, oldest first (see `metricQuery`).
-    func metric(_ name: String, target: CockpitTarget, minutes: Int) async throws -> [MetricPoint]
+    /// One series per instance.
+    func metric(_ name: String, target: CockpitTarget, minutes: Int) async throws -> [MetricSeries]
 }
 
 public func client(for key: APIKey) -> ScalewayClient {

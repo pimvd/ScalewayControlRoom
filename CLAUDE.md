@@ -63,10 +63,14 @@ Swift package for everything that is not UI.
   the instance guide's Alloy config adds the same label.
 - Metrics: the same data sources of type metrics, through their Prometheus API
   (`/prometheus/api/v1/...`). Names are not assumed: the app asks Cockpit for
-  the metric names carrying `{resource_id="<id>"}`, lists them, and charts the
-  one tapped (`metricQuery`: rate for counters, average otherwise; Swift
-  Charts). The instance guide's Alloy config pushes basic node metrics with the
-  same label.
+  the metric names carrying `{resource_id="<id>"}` and shows them as a
+  dashboard, a chart per metric with a line per `resource_instance`
+  (`metricQuery`: rate for counters, average otherwise; Swift Charts); tapping
+  one opens it large. Cockpit gives no metric types, so names decide, with
+  Scaleway's exceptions in `Logic.swift`: `instances_total` is no counter, the
+  serverless CPU "ratio" is a percentage, `_info`/`_status` are not charted.
+  The instance guide's Alloy config pushes basic node metrics with the same
+  label.
 - Serverless: containers (v1) and functions (v1beta1) carry no project; it
   comes from their namespace. Functions can only be listed per namespace.
   Jobs (serverless-jobs v1alpha1) are job definitions; their status is the

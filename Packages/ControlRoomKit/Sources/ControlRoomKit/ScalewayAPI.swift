@@ -246,7 +246,7 @@ public struct ScalewayAPI: ScalewayClient {
         return MetricNames(sources: sources.count, names: names.sorted())
     }
 
-    public func metric(_ name: String, target: CockpitTarget, minutes: Int) async throws -> [MetricPoint] {
+    public func metric(_ name: String, target: CockpitTarget, minutes: Int) async throws -> [MetricSeries] {
         let now = Int(Date().timeIntervalSince1970)
         for base in try await dataSources(target, type: "metrics") {
             let response: PrometheusMatrix = try await send(url("prometheus/api/v1/query_range", [
@@ -254,11 +254,12 @@ public struct ScalewayAPI: ScalewayClient {
                 "start": String(now - minutes * 60), "end": String(now),
                 "step": String(metricStep(minutes: minutes)),
             ], base: base))
-            // The query sums or averages to one series; the first source with
-            // data is the one that has the metric.
-            if let series = response.data.result.first, !series.values.isEmpty {
-                return series.values.map { MetricPoint(time: Date(timeIntervalSince1970: $0.time), value: $0.value) }
+            // The first source with data is the one that has the metric.
+            let series = response.data.result.filter { !$0.values.isEmpty }.map { s in
+                MetricSeries(instance: s.metric?["resource_instance"] ?? "",
+                             points: s.values.map { MetricPoint(time: Date(timeIntervalSince1970: $0.time), value: $0.value) })
             }
+            if !series.isEmpty { return series.sorted { $0.instance < $1.instance } }
         }
         return []
     }
@@ -401,7 +402,10 @@ struct PrometheusMatrix: Decodable {
             value = Double(try c.decode(String.self)) ?? .nan
         }
     }
-    struct Series: Decodable { var values: [Sample] }
+    struct Series: Decodable {
+        var metric: [String: String]?
+        var values: [Sample]
+    }
     struct Payload: Decodable { var result: [Series] }
     var data: Payload
 }

@@ -62,9 +62,14 @@ public struct DemoClient: ScalewayClient {
         return MetricNames(sources: 1, names: hasMetrics ? Demo.metricNames : [])
     }
 
-    public func metric(_ name: String, target: CockpitTarget, minutes: Int) async throws -> [MetricPoint] {
+    public func metric(_ name: String, target: CockpitTarget, minutes: Int) async throws -> [MetricSeries] {
         try await Task.sleep(for: latency)
-        return Demo.metric(name, minutes: minutes, now: Date())
+        let points = Demo.metric(name, minutes: minutes, now: Date())
+        // The instance count is for the app as a whole; the rest per instance.
+        if name == "instances" { return [MetricSeries(instance: "", points: points)] }
+        return [("deployment-7f9c-k2x8p", 1.0), ("deployment-7f9c-q4m1z", 0.7)].map { instance, share in
+            MetricSeries(instance: instance, points: points.map { MetricPoint(time: $0.time, value: $0.value * share) })
+        }
     }
 }
 

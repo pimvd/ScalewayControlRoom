@@ -237,7 +237,8 @@ final class ScalewayAPITests: XCTestCase {
             #"{"status": "success", "data": ["requests_total", "cpu_usage_ratio"]}"#)
         transport.responses["/prometheus/api/v1/query_range"] = (200, """
             {"status": "success", "data": {"resultType": "matrix",
-              "result": [{"metric": {}, "values": [[1700000000, "0.25"], [1700000060.5, "0.5"]]}]}}
+              "result": [{"metric": {"resource_instance": "app-b"}, "values": [[1700000000, "0.25"], [1700000060.5, "0.5"]]},
+                         {"metric": {"resource_instance": "app-a"}, "values": [[1700000000, "1"]]}]}}
             """)
         let api = ScalewayAPI(key: key, transport: transport)
         let target = CockpitTarget(projectID: "p", region: .frPar, resourceID: "r1")
@@ -247,11 +248,12 @@ final class ScalewayAPITests: XCTestCase {
         XCTAssertEqual(transport.queries(for: "/prometheus/api/v1/label/__name__/values").first?["match[]"], #"{resource_id="r1"}"#)
         XCTAssertEqual(transport.queries(for: "/cockpit/v1/regions/fr-par/data-sources").first?["types"], "metrics")
 
-        let points = try await api.metric("requests_total", target: target, minutes: 60)
-        XCTAssertEqual(points.map(\.value), [0.25, 0.5])
-        XCTAssertEqual(points.last?.time, Date(timeIntervalSince1970: 1_700_000_060.5))
+        let series = try await api.metric("requests_total", target: target, minutes: 60)
+        XCTAssertEqual(series.map(\.instance), ["app-a", "app-b"])
+        XCTAssertEqual(series[1].points.map(\.value), [0.25, 0.5])
+        XCTAssertEqual(series[1].points.last?.time, Date(timeIntervalSince1970: 1_700_000_060.5))
         let query = transport.queries(for: "/prometheus/api/v1/query_range").first!
-        XCTAssertEqual(query["query"], #"sum(rate(requests_total{resource_id="r1"}[5m]))"#)
+        XCTAssertEqual(query["query"], #"sum by (resource_instance) (rate(requests_total{resource_id="r1"}[5m]))"#)
         XCTAssertEqual(query["step"], "36")
     }
 

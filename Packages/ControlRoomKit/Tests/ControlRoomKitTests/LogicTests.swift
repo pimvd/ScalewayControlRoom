@@ -113,16 +113,35 @@ final class LogicTests: XCTestCase {
     }
 
     func testMetricQueriesRateCountersAndAverageTheRest() {
-        XCTAssertEqual(metricQuery("http_requests_total", selector: #"{resource_id="r"}"#), #"sum(rate(http_requests_total{resource_id="r"}[5m]))"#)
-        XCTAssertEqual(metricQuery("memory_usage_bytes", selector: #"{resource_id="r"}"#), #"avg(memory_usage_bytes{resource_id="r"})"#)
+        XCTAssertEqual(metricQuery("http_requests_total", selector: #"{resource_id="r"}"#),
+                       #"sum by (resource_instance) (rate(http_requests_total{resource_id="r"}[5m]))"#)
+        XCTAssertEqual(metricQuery("memory_usage_bytes", selector: #"{resource_id="r"}"#),
+                       #"avg by (resource_instance) (memory_usage_bytes{resource_id="r"})"#)
+        // Scaleway's instance count ends in _total but is no counter.
+        XCTAssertFalse(isCounter("serverless_container_instances_total"))
+        XCTAssertTrue(isCounter("serverless_container_receive_bytes_total"))
         XCTAssertEqual(metricStep(minutes: 15), 15)
         XCTAssertEqual(metricStep(minutes: 1440), 864)
+    }
+
+    func testMetricTitlesAndInstanceLabels() {
+        XCTAssertEqual(metricTitle("serverless_container_cpu_usage_ratio"), "CPU usage")
+        XCTAssertEqual(metricTitle("serverless_container_receive_bytes_total"), "Receive bytes")
+        XCTAssertEqual(metricTitle("serverless_container_instances_total"), "Instances")
+        XCTAssertEqual(metricTitle("node_load1"), "Node load1")
+        XCTAssertEqual(metricTitle("serverless_container_memory_usage_bytes"), "Memory usage")
+        XCTAssertEqual(metricTitle("http_requests_total"), "HTTP requests")
+        XCTAssertFalse(isChartable("serverless_container_info"))
+        XCTAssertFalse(isChartable("serverless_container_status"))
+        XCTAssertTrue(isChartable("serverless_container_memory_usage_bytes"))
+        XCTAssertEqual(instanceLabel("fqprdcb358d0e-app-00020-deployment-fbc974dc5-8q8c6"), "8q8c6")
     }
 
     func testMetricValuesUseTheUnitTheirNameSuggests() {
         XCTAssertEqual(formatMetric(183_400_000, name: "memory_usage_bytes"), "183.4 MB")
         XCTAssertEqual(formatMetric(512, name: "network_receive_bytes_total"), "512 B/s")
         XCTAssertEqual(formatMetric(0.354, name: "cpu_usage_ratio"), "35.4%")
+        XCTAssertEqual(formatMetric(8.15, name: "serverless_container_cpu_usage_ratio"), "8.2%")
         XCTAssertEqual(formatMetric(42.25, name: "http_requests_total"), "42.2/s")
         XCTAssertEqual(formatMetric(2, name: "instances"), "2.0")
         XCTAssertEqual(formatMetric(0, name: "http_requests_total"), "0/s")
@@ -149,7 +168,7 @@ final class DemoTests: XCTestCase {
         XCTAssertFalse(app.names.isEmpty)
         XCTAssertTrue(instance.names.isEmpty)
         let points = try await demo.metric("cpu_usage_ratio", target: CockpitTarget(projectID: "webshop", region: .frPar, resourceID: "demo-c1"), minutes: 60)
-        XCTAssertGreaterThan(points.count, 50)
+        XCTAssertGreaterThan(points.first?.points.count ?? 0, 50)
     }
 
     func testServerlessAppsHaveLogsAndInstancesDoNot() async throws {
