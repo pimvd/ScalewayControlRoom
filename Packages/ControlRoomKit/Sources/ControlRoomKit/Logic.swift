@@ -108,6 +108,37 @@ public func formatMoney(_ amount: Double, currency: String = "EUR") -> String {
     return formatter.string(from: NSNumber(value: amount)) ?? "\(amount)"
 }
 
+// MARK: Instance logs and metrics
+
+/// Scaleway's dates, such as "2026-11-20T09:12:34.567890+00:00". The
+/// fraction is dropped: the system parser does not take six digits everywhere.
+public func parseScalewayDate(_ text: String) -> Date? {
+    let whole = text.replacingOccurrences(of: #"\.\d+"#, with: "", options: .regularExpression)
+    return ISO8601DateFormatter().date(from: whole)
+}
+
+/// Why an instance may have nothing in Cockpit for a period.
+public enum InstanceQuiet: Equatable, Sendable {
+    /// Stopped or stopping: it sends nothing now, but may have before.
+    case stopped
+    /// Booting: its agent starts with it.
+    case starting
+    /// Created within the hour: no agent has been set up yet, or only just.
+    case new
+    /// Running: no agent, or one that sends nothing yet.
+    case running
+}
+
+public func instanceQuiet(_ server: Server, now: Date = Date()) -> InstanceQuiet {
+    switch server.state {
+    case .stopped, .stoppedInPlace, .stopping: return .stopped
+    case .starting: return .starting
+    default:
+        if let created = server.created, now.timeIntervalSince(created) < 3600 { return .new }
+        return .running
+    }
+}
+
 // MARK: Metrics
 
 /// Scaleway's `serverless_container_instances_total` counts running

@@ -189,4 +189,26 @@ final class DemoTests: XCTestCase {
         XCTAssertFalse(app.lines.isEmpty)
         XCTAssertTrue(instance.lines.isEmpty)
     }
+
+    func testAQuietInstanceIsExplainedByItsState() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        var s = Server(id: "1", name: "web", state: .stopped, commercialType: "DEV1-S", zone: .frPar1, project: "p")
+        XCTAssertEqual(instanceQuiet(s, now: now), .stopped)
+        s.state = .stopping
+        XCTAssertEqual(instanceQuiet(s, now: now), .stopped)
+        s.state = .starting
+        XCTAssertEqual(instanceQuiet(s, now: now), .starting)
+        s.state = .running
+        XCTAssertEqual(instanceQuiet(s, now: now), .running)
+        s.created = now.addingTimeInterval(-600)
+        XCTAssertEqual(instanceQuiet(s, now: now), .new)
+        s.created = now.addingTimeInterval(-7200)
+        XCTAssertEqual(instanceQuiet(s, now: now), .running)
+    }
+
+    func testScalewayDatesParseWithTheirFraction() {
+        XCTAssertEqual(parseScalewayDate("1970-01-01T00:01:40.123456+00:00"), Date(timeIntervalSince1970: 100))
+        XCTAssertEqual(parseScalewayDate("1970-01-01T00:01:40Z"), Date(timeIntervalSince1970: 100))
+        XCTAssertNil(parseScalewayDate("yesterday"))
+    }
 }

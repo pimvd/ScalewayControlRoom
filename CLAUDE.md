@@ -74,6 +74,10 @@ Swift package for everything that is not UI.
   serverless CPU "ratio" is a percentage, `_info`/`_status` are not charted.
   The instance guide's Alloy config pushes basic node metrics with the same
   label.
+- An instance with no logs or metrics in the period gets an explanation from
+  its state (`instanceQuiet`: stopped, starting, new = created within the
+  hour, running) above the Alloy setup, which is collapsed when the agent may
+  already be there (stopped, starting).
 - Serverless: containers (v1) and functions (v1beta1) carry no project; it
   comes from their namespace. Functions can only be listed per namespace.
   Jobs (serverless-jobs v1alpha1) are job definitions; their status is the

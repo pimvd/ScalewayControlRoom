@@ -49,9 +49,10 @@ public struct Server: Identifiable, Hashable, Sendable {
     public var project: String
     public var tags: [String]
     public var publicIPs: [String]
+    public var created: Date?
 
     public init(id: String, name: String, state: ServerState, commercialType: String, zone: Zone,
-                project: String, tags: [String] = [], publicIPs: [String] = []) {
+                project: String, tags: [String] = [], publicIPs: [String] = [], created: Date? = nil) {
         self.id = id
         self.name = name
         self.state = state
@@ -60,6 +61,7 @@ public struct Server: Identifiable, Hashable, Sendable {
         self.project = project
         self.tags = tags
         self.publicIPs = publicIPs
+        self.created = created
     }
 }
 

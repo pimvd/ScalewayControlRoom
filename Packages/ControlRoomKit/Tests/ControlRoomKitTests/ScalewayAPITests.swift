@@ -34,11 +34,13 @@ final class ScalewayAPITests: XCTestCase {
         let transport = FakeTransport()
         transport.responses["/instance/v1/zones/nl-ams-1/servers"] = (200, """
             {"servers": [{"id": "1", "name": "web", "state": "stopped in place", "commercial_type": "DEV1-S",
-              "zone": "nl-ams-1", "project": "p", "tags": ["prod"], "public_ips": [{"address": "51.15.0.1"}]}]}
+              "zone": "nl-ams-1", "project": "p", "tags": ["prod"], "public_ips": [{"address": "51.15.0.1"}],
+              "creation_date": "2026-11-20T09:12:34.567890+00:00"}]}
             """)
         let servers = try await ScalewayAPI(key: key, transport: transport).listServers(zone: .nlAms1)
         XCTAssertEqual(servers, [Server(id: "1", name: "web", state: .stoppedInPlace, commercialType: "DEV1-S",
-                                        zone: .nlAms1, project: "p", tags: ["prod"], publicIPs: ["51.15.0.1"])])
+                                        zone: .nlAms1, project: "p", tags: ["prod"], publicIPs: ["51.15.0.1"],
+                                        created: Date(timeIntervalSince1970: 1_795_165_954))])
         XCTAssertEqual(transport.requests.first?.value(forHTTPHeaderField: "X-Auth-Token"), "secret")
         XCTAssertEqual(transport.queries(for: "/instance/v1/zones/nl-ams-1/servers").first?["per_page"], "100")
     }

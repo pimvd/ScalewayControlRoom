@@ -336,11 +336,12 @@ struct APIServer: Decodable {
     var project: String
     var tags: [String]?
     var publicIps: [IP]?
+    var creationDate: String?
 
     var server: Server {
         Server(id: id, name: name, state: ServerState(apiValue: state), commercialType: commercialType,
                zone: Zone(rawValue: zone) ?? .frPar1, project: project, tags: tags ?? [],
-               publicIPs: (publicIps ?? []).map(\.address))
+               publicIPs: (publicIps ?? []).map(\.address), created: creationDate.flatMap(parseScalewayDate))
     }
 }
 
