@@ -103,12 +103,25 @@ final class ScalewayAPITests: XCTestCase {
         XCTAssertEqual(query["billing_period"], "2026-11")
     }
 
-    func testPricesKeepTheCommercialTypesAsTheyAre() async throws {
+    func testPricesComeFromTheProductCatalog() async throws {
         let transport = FakeTransport()
-        transport.responses["/instance/v1/zones/fr-par-1/products/servers"] = (200,
-            #"{"servers": {"DEV1-S": {"hourly_price": 0.0109, "ncpus": 2}, "POP2_HC-2C": {"hourly_price": 0.07}}}"#)
+        transport.responses["/product-catalog/v2alpha1/public-catalog/products"] = (200, """
+            {"products": [
+              {"product": "DEV1-S", "price": {"retail_price": {"currency_code": "EUR", "units": 0, "nanos": 8976000}},
+               "unit_of_measure": {"unit": "hour", "size": 1}},
+              {"product": "POP2-32C-128G", "price": {"retail_price": {"currency_code": "EUR", "units": 1, "nanos": 180000000}},
+               "unit_of_measure": {"unit": "hour", "size": 1}},
+              {"product": "ARM64-128GB", "price": {"retail_price": {"currency_code": "EUR", "units": 0, "nanos": 0}},
+               "unit_of_measure": {"unit": "hour", "size": 1}}
+            ], "total_count": 3}
+            """)
         let prices = try await ScalewayAPI(key: key, transport: transport).hourlyPrices(zone: .frPar1)
-        XCTAssertEqual(prices, ["DEV1-S": 0.0109, "POP2_HC-2C": 0.07])
+        XCTAssertEqual(prices.keys.sorted(), ["DEV1-S", "POP2-32C-128G"])
+        XCTAssertEqual(prices["DEV1-S"]!, 0.008976, accuracy: 1e-9)
+        XCTAssertEqual(prices["POP2-32C-128G"]!, 1.18, accuracy: 1e-9)
+        let query = transport.queries(for: "/product-catalog/v2alpha1/public-catalog/products").first!
+        XCTAssertEqual(query["product_types"], "instance")
+        XCTAssertEqual(query["zone"], "fr-par-1")
     }
 
     func testServerlessTakesTheProjectFromTheNamespace() async throws {

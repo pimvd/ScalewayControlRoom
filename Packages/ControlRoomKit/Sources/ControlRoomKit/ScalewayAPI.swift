@@ -130,14 +130,14 @@ public struct ScalewayAPI: ScalewayClient {
     }
 
     public func hourlyPrices(zone: Zone) async throws -> [String: Double] {
-        // The catalogue is a map keyed by commercial type, paged like a list.
-        // Decoded without the snake case strategy, which would touch the keys.
-        let entries: [(String, Double)] = try await allPages { page in
-            let response: ServerTypes = try await send(
-                url("instance/v1/zones/\(zone.rawValue)/products/servers", ["per_page": String(Self.pageSize), "page": String(page)]),
-                decoder: JSONDecoder())
-            return response.servers.map { ($0.key, $0.value.hourlyPrice) }
-        }
+        // The Instance API's own catalogue (`products/servers`) reports 0 for
+        // every price; the public Product Catalog has them, keyed by the same
+        // commercial type. Retired types carry 0 and are left out.
+        let products: [CatalogProduct] = try await pages(
+            "product-catalog/v2alpha1/public-catalog/products",
+            ["product_types": "instance", "zone": zone.rawValue], \.products)
+        let entries = products.filter { $0.unitOfMeasure?.unit == "hour" && $0.price.retailPrice.value > 0 }
+            .map { ($0.product, $0.price.retailPrice.value) }
         return Dictionary(entries, uniquingKeysWith: { first, _ in first })
     }
 
@@ -322,6 +322,7 @@ struct ListResponse<T: Decodable>: Decodable {
     var projects: [T]?
     var jobRuns: [T]?
     var dataSources: [T]?
+    var products: [T]?
     var totalDiscountUntaxedValue: Double?
 }
 
@@ -372,12 +373,19 @@ struct APIConsumption: Decodable {
     var projectId: String
 }
 
-struct ServerTypes: Decodable {
-    struct ServerType: Decodable {
-        var hourlyPrice: Double
-        enum CodingKeys: String, CodingKey { case hourlyPrice = "hourly_price" }
+struct CatalogProduct: Decodable {
+    struct Price: Decodable {
+        struct Amount: Decodable {
+            var units: Double
+            var nanos: Double
+            var value: Double { units + nanos / 1e9 }
+        }
+        var retailPrice: Amount
     }
-    var servers: [String: ServerType]
+    struct Unit: Decodable { var unit: String }
+    var product: String
+    var price: Price
+    var unitOfMeasure: Unit?
 }
 
 struct APINamespace: Decodable {
