@@ -197,6 +197,22 @@ jobs:
           "$RUNNER_TEMP/asc-venv/bin/pip" install --quiet cryptography
           "$RUNNER_TEMP/asc-venv/bin/python" scripts/sync_subscriptions.py
 
+      # Archiving made Apple create a development certificate whose key lives
+      # only on this runner. Left behind, these fill the team's certificate
+      # limit (shared with every other app) until archiving fails. Only the
+      # certificates in this runner's keychain are revoked.
+      - name: Revoke this run's development certificate
+        if: always() && inputs.upload_build
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          fingerprints=$(security find-certificate -a -c "Created via API" -Z 2>/dev/null \
+            | awk '/^SHA-1 hash:/ { print $3 }' | sort -u)
+          python3 -m venv "$RUNNER_TEMP/revoke-venv"
+          "$RUNNER_TEMP/revoke-venv/bin/pip" install --quiet cryptography
+          "$RUNNER_TEMP/revoke-venv/bin/python" scripts/revoke_runner_certificates.py $fingerprints
+
       - name: Remove the API key
         if: always()
         run: |

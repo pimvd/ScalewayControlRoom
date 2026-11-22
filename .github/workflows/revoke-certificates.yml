@@ -1,0 +1,48 @@
+# Revokes every "Apple Development: Created via API" certificate on the team:
+# the ones release runs left behind before they cleaned up after themselves,
+# here or in another app. Run it when archiving says the certificate limit is
+# reached. Certificates made in Xcode (named after their owner) and every
+# distribution certificate are left alone. Uses the same ASC_* secrets as the
+# release workflow.
+name: Revoke stale certificates
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  revoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Write the API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          key="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+          if printf '%s' "$ASC_KEY_P8" | grep -q -- '-----BEGIN PRIVATE KEY-----'; then
+            printf '%s\n' "$ASC_KEY_P8" > "$key"
+          else
+            printf '%s' "$ASC_KEY_P8" | tr -d '[:space:]' | base64 --decode > "$key"
+          fi
+          chmod 600 "$key"
+          echo "ASC_KEY_PATH=$key" >> "$GITHUB_ENV"
+
+      - name: Revoke
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet cryptography
+          "$RUNNER_TEMP/venv/bin/python" scripts/revoke_runner_certificates.py --all-created-via-api
+
+      - name: Remove the API key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
