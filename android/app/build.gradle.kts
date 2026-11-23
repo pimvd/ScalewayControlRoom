@@ -54,6 +54,11 @@ android {
 
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        // Robolectric downloads its Android jar when the tests run: from the
+        // same mirror as Gradle (see settings.gradle.kts).
+        unitTests.all {
+            it.systemProperty("robolectric.dependency.repo.url", "https://maven-central.storage-download.googleapis.com/maven2/")
+        }
     }
 }
 
