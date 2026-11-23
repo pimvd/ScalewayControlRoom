@@ -81,15 +81,16 @@ same split as iOS:
   route of the demo and checks it; `./gradlew :app:recordRoborazziDebug`
   also saves the Play Store pictures to `PlayStore/screenshots/phone`. No
   emulator needed.
-- `PlayStore/` the listing, subscriptions and graphics;
-  `scripts/validate_listing.py` checks them against the app.
-  `PLAY_STORE.md`: what is mocked and the steps once there is a Play account.
+- `DISTRIBUTION.md`: how the app is published, as a signed APK on GitHub
+  Releases, and the signing key.
+- `PlayStore/` the listing, subscriptions, graphics and the closed test's
+  tester page; `scripts/validate_listing.py` checks them against the app.
+  `PLAY_STORE.md` and `TESTERS.md`: the steps to publish on Google Play later.
 
 ### Shared
 
-- `website/`: marketing page, support (also the key setup guide), privacy,
-  and `android-test.html` for the Play closed test's testers (not linked
-  from the other pages; `android/TESTERS.md` has the recruiting messages).
+- `website/`: marketing page, support (also the key setup guide and the
+  Android install guide, `support.html#android`) and privacy.
   The Website workflow uploads it with the app icon and the App Store
   screenshots to `vandijkcloud.nl/Scaleway-ControlRoom/` over FTP.
 
@@ -160,21 +161,25 @@ same split as iOS:
 
 ## Android specifics
 
-- No Google Play developer account yet. Pro is sold by `MockProStore`, a local
-  test store (like Xcode's StoreKit configuration); `PlayProStore` (Google
-  Play Billing, product `pro` with base plans `yearly` and `monthly`) is used
-  when built with `-PplayBilling=true`. The release workflow's Play upload is
-  a placeholder.
+- Distributed as a signed APK on GitHub Releases (`android-v<version>`),
+  not on Google Play: there, Play Billing cannot work, so that build has
+  every feature free. Users install it by hand or with Obtainium.
+- `-Pstore` picks where Pro comes from: `test` (default; `MockProStore`, a
+  local test store like Xcode's StoreKit configuration), `github`
+  (`FreeProStore`, everything free) or `play` (`PlayProStore`, Google Play
+  Billing, product `pro` with base plans `yearly` and `monthly`). The release
+  workflow's Play upload is a placeholder.
 - Rating: Play's in-app review, at the same milestones.
 - The screenshot route is the `screenshotRoute` intent extra.
-- Version: `versionName` matches iOS's `MARKETING_VERSION`; `versionCode` is
-  the commit count, passed as `-PversionCode`.
+- Version: `versionCode` is the commit count, passed as `-PversionCode`;
+  `versionName` is iOS's `MARKETING_VERSION` plus that number (`1.0.57`), so
+  every GitHub release has a version Obtainium can compare.
 
 ## Workflows
 
 `ci.yml` (every push, any branch: validators, package tests, simulator build,
-Android tests and debug build), `android-release.yml` (bundle, manual; Play
-upload not set up), `android-screenshots.yml` (manual, commits them),
+Android tests and debug build), `android-release.yml` (manual: the signed APK
+as a GitHub Release, or a Play bundle whose upload is not set up), `android-screenshots.yml` (manual, commits them),
 `release.yml` (TestFlight, metadata and subscriptions, manual),
 `screenshots.yml` (simulator screenshots, manual, commits them),
 `website.yml` (on website changes and after Screenshots).

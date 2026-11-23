@@ -6,7 +6,7 @@
   <title>Scaleway ControlRoom — Support</title>
   <style>
     body { font-family: -apple-system, system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #222; }
-    code { background: #f2f2f2; padding: 1px 4px; border-radius: 4px; }
+    code { background: #f2f2f2; padding: 1px 4px; border-radius: 4px; overflow-wrap: anywhere; }
     pre { background: #f2f2f2; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.45; }
     @media (prefers-color-scheme: dark) { body { background: #111; color: #ddd; } a { color: #8ab4ff; } code, pre { background: #222; } }
   </style>
@@ -72,6 +72,27 @@ echo &quot;Organization ID: $ORG&quot;</code></pre>
   </ol>
   <p>The configuration labels every line with the instance's ID (<code>resource_id</code>), which is how the app finds them. Logs you push yourself are billed by Scaleway as Cockpit custom data.</p>
 
+  <h2 id="android">Installing on Android</h2>
+
+  <p>The Android app is not in the Play Store. It is published on <a href="https://github.com/pimvd/ScalewayControlRoom/releases/latest">GitHub</a>, and every feature is free there.</p>
+
+  <h3>With Obtainium (recommended)</h3>
+  <p><a href="https://obtainium.imranr.dev/">Obtainium</a> installs apps from GitHub and keeps them up to date.</p>
+  <ol>
+    <li>Install Obtainium.</li>
+    <li>In Obtainium, tap <em>Add app</em> and enter <code>https://github.com/pimvd/ScalewayControlRoom</code>.</li>
+    <li>Tap <em>Install</em>. Android asks once whether Obtainium may install apps; allow it.</li>
+  </ol>
+  <p>Obtainium then tells you when there is a new version.</p>
+
+  <h3>By hand</h3>
+  <ol>
+    <li>On your phone, open the <a href="https://github.com/pimvd/ScalewayControlRoom/releases/latest">latest release</a> and download the <code>.apk</code> file.</li>
+    <li>Open the download. Android asks whether your browser may install apps; allow it, then tap <em>Install</em>.</li>
+  </ol>
+  <p>For a new version, do the same again: it installs over the old one and keeps your keys. To check a download, compare its SHA-256 with the one in the release notes. Every release is signed with the same certificate, also listed there.</p>
+  <p>Android 9 or later is needed.</p>
+
   <h2>Frequently asked questions</h2>
 
   <p><strong>Does stopping an instance stop all of its costs?</strong><br>
@@ -84,7 +105,7 @@ echo &quot;Organization ID: $ORG&quot;</code></pre>
   Scaleway rejected it: it may have expired, been deleted, or lack a permission. Check the policy of its application in the console. The other keys keep working.</p>
 
   <p><strong>How do I remove a key?</strong><br>
-  Tap it in <em>Settings</em>. That deletes it from your iPhone; to make it useless everywhere, also delete it in the Scaleway console.</p>
+  Tap it in <em>Settings</em>. That deletes it from your phone; to make it useless everywhere, also delete it in the Scaleway console.</p>
 
   <p><strong>Can I try the app without a Scaleway account?</strong><br>
   Yes: tap <em>Try the demo</em>. It shows made-up instances and costs, and you can start and stop them.</p>

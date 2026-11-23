@@ -4,10 +4,14 @@ plugins {
     alias(libs.plugins.roborazzi)
 }
 
-// Google Play Billing needs the app on Google Play. Until then the app sells
-// Pro from a local test store (MockProStore), as the iPhone app does from
-// Xcode's StoreKit configuration. Build with -PplayBilling=true to use Play.
-val playBilling = providers.gradleProperty("playBilling").orNull == "true"
+// Where Pro comes from, by where the app is distributed (-Pstore=...):
+//   test    a local test store (MockProStore), as the iPhone app has from
+//           Xcode's StoreKit configuration. The default.
+//   play    Google Play Billing, for the Play Store.
+//   github  everything free (FreeProStore), for the APK on GitHub Releases,
+//           which cannot use Google Play Billing.
+val store = providers.gradleProperty("store").orNull ?: "test"
+require(store in listOf("test", "play", "github")) { "-Pstore must be test, play or github, not $store" }
 
 android {
     namespace = "com.pvd.scwcontrolroom"
@@ -18,10 +22,12 @@ android {
         minSdk = 28
         targetSdk = 37
         // The build number is the git commit count, passed by the release
-        // workflow, as on iOS; the version matches the iPhone app's.
+        // workflow, as on iOS. The version is the iPhone app's plus the build
+        // number, so each GitHub release has a version of its own (Obtainium
+        // compares them).
         versionCode = providers.gradleProperty("versionCode").orNull?.toInt() ?: 1
-        versionName = "1.0"
-        buildConfigField("boolean", "PLAY_BILLING", playBilling.toString())
+        versionName = "1.0.$versionCode"
+        buildConfigField("String", "STORE", "\"$store\"")
     }
 
     signingConfigs {

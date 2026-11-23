@@ -29,7 +29,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 /**
  * Pro through Google Play Billing, checked on the device (there is no
  * server). Not used until the app is on Google Play: see MockProStore and
- * the playBilling build property.
+ * -Pstore=play (app/build.gradle.kts).
  */
 class PlayProStore(context: Context) : ProStore {
     override var subscribed by mutableStateOf(false)

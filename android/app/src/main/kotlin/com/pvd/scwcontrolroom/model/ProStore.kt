@@ -71,3 +71,19 @@ class MockProStore(context: Context) : ProStore {
         subscribed = value
     }
 }
+
+/**
+ * The APK on GitHub Releases cannot use Google Play Billing, so every Pro
+ * feature is free there.
+ */
+object FreeProStore : ProStore {
+    override val subscribed = true
+    override val plans = emptyList<ProPlan>()
+    override val isTestStore = false
+
+    override suspend fun check() {}
+    override suspend fun loadPlans() {}
+    override suspend fun buy(activity: Activity, plan: ProPlan) {}
+    override suspend fun restore() {}
+    override fun manage(context: Context) {}
+}

@@ -51,6 +51,7 @@ import com.pvd.scwcontrolroom.kit.ProProducts
 import com.pvd.scwcontrolroom.kit.ScalewayApi
 import com.pvd.scwcontrolroom.kit.Zone
 import com.pvd.scwcontrolroom.kit.validateKey
+import com.pvd.scwcontrolroom.model.FreeProStore
 import com.pvd.scwcontrolroom.model.Links
 import com.pvd.scwcontrolroom.model.ProPlan
 import kotlinx.coroutines.launch
@@ -76,7 +77,9 @@ fun SettingsScreen() {
             Footnote("Keys are stored encrypted on this phone and sent only to Scaleway. Tap a key to remove it.")
 
             SectionHeader("Pro")
-            if (pro.subscribed) {
+            if (pro == FreeProStore) {
+                Footnote("Every feature is free in this version of the app.")
+            } else if (pro.subscribed) {
                 LabeledRow("Status", if (pro.isTestStore) "Active (test store)" else "Active")
                 LinkRow(if (pro.isTestStore) "Cancel the test subscription" else "Manage subscription") { pro.manage(context) }
             } else {
@@ -90,7 +93,7 @@ fun SettingsScreen() {
             LinkRow("Privacy policy") { openUrl(context, Links.PRIVACY) }
 
             SectionHeader("About")
-            LabeledRow("Version", "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+            LabeledRow("Version", BuildConfig.VERSION_NAME)
             Footnote("ControlRoom is an independent app. It is not made, endorsed or supported by Scaleway.")
         }
     }

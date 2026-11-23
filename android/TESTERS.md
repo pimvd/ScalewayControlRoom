@@ -1,13 +1,16 @@
 # Finding testers
 
-Google lets a new personal developer account into production only after a
-closed test with at least 12 testers who stay opted in for 14 days in a row.
+Only needed if the app goes to Google Play; for now it is distributed on
+GitHub (`DISTRIBUTION.md`). Google lets a new personal developer account into
+production only after a closed test with at least 12 testers who stay opted
+in for 14 days in a row.
 Aim for 15–20. Testers need an Android phone and a Google account, not a
 Scaleway account: the demo shows everything.
 
-The page testers follow is `website/android-test.html`, published at
-https://vandijkcloud.nl/Scaleway-ControlRoom/android-test.html. Fill in its
-two links (the Google Group and the test's opt-in link) before sharing it.
+The page testers follow is `PlayStore/tester-page.html`. Fill in its two
+links (the Google Group and the test's opt-in link), then copy it to
+`website/android-test.html`, which publishes it at
+https://vandijkcloud.nl/Scaleway-ControlRoom/android-test.html.
 
 ## Setting up the test
 
@@ -16,8 +19,7 @@ two links (the Google Group and the test's opt-in link) before sharing it.
 2. In the Play Console: Testing → Closed testing → create a track, add the
    group's email address as the tester list, and upload a bundle from the
    Android release workflow.
-3. Copy the track's opt-in link and the group's link into
-   `website/android-test.html`.
+3. Copy the track's opt-in link and the group's link into the tester page.
 
 ## Message for colleagues and friends
 
