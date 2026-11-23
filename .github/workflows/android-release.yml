@@ -1,0 +1,13 @@
+# Placeholder, so GitHub offers this manual workflow. The real one lives on
+# the branch with the Android app (android/): run it from there, choosing
+# that branch under "Use workflow from". Merging the branch replaces this file.
+name: Android release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "::notice::Run this workflow from the branch that holds android/."
