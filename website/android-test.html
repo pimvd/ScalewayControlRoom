@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scaleway ControlRoom — Test the Android app</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #222; }
+    .steps li { margin-bottom: 10px; }
+    .button { display: inline-block; padding: 10px 18px; border-radius: 8px; background: #0e8a63; color: #fff; text-decoration: none; font-weight: 600; }
+    @media (prefers-color-scheme: dark) { body { background: #111; color: #ddd; } a { color: #8ab4ff; } .button { background: #34c08b; color: #00382a; } }
+  </style>
+</head>
+<body>
+  <h1>Test ControlRoom for Android</h1>
+
+  <p>ControlRoom starts and stops Scaleway servers and shows what they cost, from your phone. Before Google lets a new app into the Play Store, at least 12 people have to test it for 14 days. Could you be one of them? It takes two minutes to join; after that, all you do is keep the app installed.</p>
+
+  <h2>What you need</h2>
+  <ul>
+    <li>An Android phone (Android 9 or later) with the Play Store.</li>
+    <li>A Google account, the one you use on that phone.</li>
+    <li>No Scaleway account: the app has a demo with made-up servers and costs, and every feature is open in it.</li>
+  </ul>
+
+  <h2>How to join</h2>
+  <!-- Fill in both links once the closed test exists in the Play Console:
+       GROUP_LINK  the Google Group used as the tester list
+       OPT_IN_LINK the closed test's opt-in link (Play Console, Testing → Closed testing → Testers) -->
+  <ol class="steps">
+    <li>Join the tester group with the Google account on your phone:<br>
+      <a class="button" href="GROUP_LINK">Join the tester group</a></li>
+    <li>Then accept the invitation to the test, with the same account:<br>
+      <a class="button" href="OPT_IN_LINK">Become a tester</a></li>
+    <li>On that page, follow the link to Google Play and install ControlRoom. It is free.</li>
+    <li>Open it and tap <em>Try the demo</em>.</li>
+    <li><strong>Keep the app installed for 14 days</strong>, and open it now and then. That is what Google counts.</li>
+  </ol>
+
+  <h2>Things to try</h2>
+  <ul>
+    <li>Stop a server and start it again, and watch its state change.</li>
+    <li>Open a serverless app and look at its logs and its metrics.</li>
+    <li>Look up last month's costs, by category and by project.</li>
+    <li>In <em>Other</em>, search for a database and open it.</li>
+    <li>Have a Scaleway account? Add an API key (Settings → Add API key) and try it on your own servers.</li>
+  </ul>
+
+  <h2>Feedback</h2>
+  <p>Anything odd, unclear or broken: email <a href="mailto:pim@vandijkcloud.nl">pim@vandijkcloud.nl</a>, or leave private feedback on the app's Play Store page (only the developer sees it). A screenshot helps. "It all works" is useful to hear too.</p>
+
+  <h2>Good to know</h2>
+  <ul>
+    <li>Pro is free during the test: the test version uses a test store and charges nothing.</li>
+    <li>The app collects nothing about you. Its only connection is to Scaleway's API, and only with a key you add. See the <a href="privacy.html">privacy policy</a>.</li>
+    <li>After the 14 days you can keep the app, or uninstall it and leave the group.</li>
+    <li>ControlRoom is an independent app. It is not made, endorsed or supported by Scaleway.</li>
+  </ul>
+
+  <p>Thank you!<br>Pim</p>
+
+  <p><a href="support.html">Support</a> · <a href="privacy.html">Privacy policy</a></p>
+</body>
+</html>

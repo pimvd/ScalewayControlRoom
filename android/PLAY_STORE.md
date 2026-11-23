@@ -24,10 +24,11 @@ mocked or left as a placeholder; the rest is ready.
    base64 -w0 upload.jks
    ```
    Keep `upload.jks` safe; Play App Signing holds the real signing key.
-3. Set `playBilling=true` (in `android/gradle.properties`, or `-PplayBilling=true`
-   in the release workflow), run the Android release workflow, and upload its
-   bundle to the internal testing track by hand: Play requires the first one
-   to be uploaded in the Play Console.
+3. Run the Android release workflow and upload its bundle to a closed
+   testing track by hand: Play requires the first one to be uploaded in the
+   Play Console. A new personal account needs 12 testers opted in for 14 days
+   before production; see `TESTERS.md`. The test builds keep the test store,
+   so testers get Pro for free (the tester page says so).
 4. Create the subscription from `PlayStore/subscriptions.json`: product `pro`
    with base plans `yearly` (P1Y, €19.99) and `monthly` (P1M, €1.99),
    auto-renewing. The IDs must match `ProProducts` (checked by
@@ -37,9 +38,12 @@ mocked or left as a placeholder; the rest is ready.
 6. App content: privacy policy URL, ads: none, data safety: no data collected
    or shared (keys never leave the phone except to Scaleway's API), content
    rating questionnaire (a developer tool: Everyone), target audience 18+.
-7. Add a Google Cloud service account with release rights in the Play
+7. For production, build with `playBilling=true` (in `android/gradle.properties`,
+   or `-PplayBilling=true` in the release workflow), so Pro is sold through
+   Google Play. Add yourself as a license tester to buy it without being charged.
+8. Add a Google Cloud service account with release rights in the Play
    Console as the `PLAY_SERVICE_ACCOUNT_JSON` secret, and replace the
    placeholder step in `.github/workflows/android-release.yml` with
    `r0adkll/upload-google-play` to the internal track.
-8. In-app reviews only show for apps installed from Google Play; nothing to
+9. In-app reviews only show for apps installed from Google Play; nothing to
    set up.

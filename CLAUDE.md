@@ -87,7 +87,9 @@ same split as iOS:
 
 ### Shared
 
-- `website/`: marketing page, support (also the key setup guide) and privacy.
+- `website/`: marketing page, support (also the key setup guide), privacy,
+  and `android-test.html` for the Play closed test's testers (not linked
+  from the other pages; `android/TESTERS.md` has the recruiting messages).
   The Website workflow uploads it with the app icon and the App Store
   screenshots to `vandijkcloud.nl/Scaleway-ControlRoom/` over FTP.
 
