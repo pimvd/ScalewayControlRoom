@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose draws everything; this only colours the window before it does. -->
+    <style name="Theme.ControlRoom" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window</item>
+    </style>
+    <color name="window">#FFFFFFFF</color>
+    <color name="ic_launcher_background">#FF141E26</color>
+</resources>

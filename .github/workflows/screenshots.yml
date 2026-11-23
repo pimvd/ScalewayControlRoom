@@ -1,5 +1,5 @@
 # Takes the App Store screenshots of the demo in the iOS simulator and commits
-# them to AppStore/screenshots/en-US. The website deploy picks them up too.
+# them to ios/AppStore/screenshots/en-US. The website deploy picks them up too.
 name: Screenshots
 
 on:
@@ -11,6 +11,11 @@ permissions:
 concurrency:
   group: screenshots
   cancel-in-progress: true
+
+# The iOS app lives in ios/.
+defaults:
+  run:
+    working-directory: ios
 
 jobs:
   screenshots:
@@ -71,7 +76,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: screenshots
-          path: AppStore/screenshots/en-US/*.png
+          path: ios/AppStore/screenshots/en-US/*.png
           retention-days: 14
 
       - name: Commit them

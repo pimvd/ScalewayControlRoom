@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app icon's power symbol (ios/.../AppIcon.appiconset/icon.png) as a vector. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M62.4,39.4 A16.8,16.8 0 1,1 45.6,39.4 M54,34.3 L54,48.4"
+        android:strokeColor="#FF34C08B"
+        android:strokeWidth="5.4"
+        android:strokeLineCap="round" />
+</vector>

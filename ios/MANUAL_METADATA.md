@@ -90,7 +90,7 @@ Pushed by the pipeline from `AppStore/screenshots/en-US/`. See
 
 ## 7. Website
 
-`website/` holds the marketing page and the privacy and support pages behind the
+`../website/` holds the marketing page and the privacy and support pages behind the
 two store URLs. The Website workflow publishes them to
 `https://vandijkcloud.nl/Scaleway-ControlRoom/` on every change, using the `FTP_HOST`,
 `FTP_USERNAME` and `FTP_PASSWORD` secrets.

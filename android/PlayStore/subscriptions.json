@@ -1,0 +1,10 @@
+{
+  "product_id": "pro",
+  "name": "ControlRoom Pro",
+  "benefits": ["Serverless, logs and metrics", "Every other resource", "Cost details and history", "More API keys"],
+  "description": "Logs, serverless, cost history, more keys",
+  "base_plans": [
+    {"base_plan_id": "yearly", "period": "P1Y", "price_eur": "19.99", "title": "Pro, yearly"},
+    {"base_plan_id": "monthly", "period": "P1M", "price_eur": "1.99", "title": "Pro, monthly"}
+  ]
+}

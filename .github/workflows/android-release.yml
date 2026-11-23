@@ -1,0 +1,86 @@
+# Builds the Android app bundle for Google Play.
+#
+# Manual trigger only. There is no Google Play developer account yet, so the
+# upload to Play is a placeholder: the signed (or, without the secrets,
+# unsigned) bundle is kept as an artifact instead. See android/PLAY_STORE.md.
+#
+# Repository secrets, once there is an upload key:
+#   UPLOAD_KEYSTORE_BASE64    the upload keystore (.jks), base64 encoded
+#   UPLOAD_KEYSTORE_PASSWORD  its password
+#   UPLOAD_KEY_ALIAS          the key's alias
+#   UPLOAD_KEY_PASSWORD       the key's password
+# And for the Play upload, later:
+#   PLAY_SERVICE_ACCOUNT_JSON a Google Cloud service account with release
+#                             rights in the Play Console
+name: Android release
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: android
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The build number is the commit count; a shallow clone would report 1.
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Validate the Play Store listing
+        run: python3 scripts/validate_listing.py
+
+      - name: Write the upload key
+        env:
+          UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$UPLOAD_KEYSTORE_BASE64" ]; then
+            echo "::warning::No UPLOAD_KEYSTORE_BASE64 secret: the bundle is unsigned."
+            exit 0
+          fi
+          printf '%s' "$UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+          echo "UPLOAD_KEYSTORE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+
+      - name: Tests and bundle
+        env:
+          UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+        run: |
+          number=$(git rev-list --count HEAD)
+          echo "Building as build $number"
+          echo "BUILD_NUMBER=$number" >> "$GITHUB_ENV"
+          ./gradlew :kit:test :app:testDebugUnitTest :app:bundleRelease -PversionCode="$number" --console=plain
+
+      # Placeholder until the Google Play developer account exists. Then:
+      # create the app in the Play Console, upload this first bundle by hand
+      # (Play requires that), add PLAY_SERVICE_ACCOUNT_JSON, and replace this
+      # step with r0adkll/upload-google-play to the internal track.
+      - name: Upload to Google Play (not set up yet)
+        run: echo "::notice::No Google Play account yet. The bundle is kept as an artifact of this run."
+
+      - name: Remove the upload key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks"
+
+      - name: Keep the bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-release-${{ env.BUILD_NUMBER || github.run_number }}
+          path: android/app/build/outputs/bundle/release/*.aab
+          retention-days: 14
