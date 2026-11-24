@@ -13,7 +13,7 @@
 #   UPLOAD_KEYSTORE_PASSWORD  its password
 #   UPLOAD_KEY_ALIAS          the key's alias
 #   UPLOAD_KEY_PASSWORD       the key's password
-# Repository variables for the upload to Play, without a key: GitHub proves
+# Repository variables (secrets work too) for the upload to Play, without a key: GitHub proves
 # to Google Cloud that the run is this repository's (Workload Identity
 # Federation), and may then act as a service account with release rights in
 # the Play Console. android/PLAY_STORE.md sets them up.
@@ -157,8 +157,8 @@ jobs:
       - name: Check the service account
         if: env.CHANNEL == 'play'
         env:
-          PROVIDER: ${{ vars.PLAY_WORKLOAD_IDENTITY_PROVIDER }}
-          ACCOUNT: ${{ vars.PLAY_SERVICE_ACCOUNT }}
+          PROVIDER: ${{ vars.PLAY_WORKLOAD_IDENTITY_PROVIDER || secrets.PLAY_WORKLOAD_IDENTITY_PROVIDER }}
+          ACCOUNT: ${{ vars.PLAY_SERVICE_ACCOUNT || secrets.PLAY_SERVICE_ACCOUNT }}
         run: |
           if [ -z "$PROVIDER" ] || [ -z "$ACCOUNT" ]; then
             echo "::error::Missing repository variable PLAY_WORKLOAD_IDENTITY_PROVIDER or PLAY_SERVICE_ACCOUNT, so the bundle was not uploaded. It is kept as an artifact of this run. See android/PLAY_STORE.md."
@@ -170,8 +170,8 @@ jobs:
         id: google
         uses: google-github-actions/auth@v3.0.0
         with:
-          workload_identity_provider: ${{ vars.PLAY_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.PLAY_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ vars.PLAY_WORKLOAD_IDENTITY_PROVIDER || secrets.PLAY_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.PLAY_SERVICE_ACCOUNT || secrets.PLAY_SERVICE_ACCOUNT }}
 
       - name: Upload to Google Play's internal track
         if: env.CHANNEL == 'play'
@@ -182,7 +182,7 @@ jobs:
           releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
           mappingFile: android/app/build/outputs/mapping/release/mapping.txt
           track: internal
-          status: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
+          status: ${{ vars.PLAY_RELEASE_STATUS || secrets.PLAY_RELEASE_STATUS || 'completed' }}
 
       - name: Remove the upload key
         if: always()
