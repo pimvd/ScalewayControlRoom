@@ -26,7 +26,9 @@ jobs:
 
       - name: Play Store listing and subscriptions
         working-directory: android
-        run: python3 scripts/validate_listing.py
+        run: |
+          python3 scripts/validate_listing.py
+          python3 -m unittest discover -s scripts/tests -t .
 
   ios:
     runs-on: xcode-27

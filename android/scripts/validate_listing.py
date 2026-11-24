@@ -78,6 +78,13 @@ def main() -> int:
     products = PRODUCTS.read_text(encoding="utf-8")
     if constant(products, "PRODUCT") != subscriptions.get("product_id"):
         problems.append("subscriptions.json: product_id does not match ProProducts.PRODUCT")
+    # Google Play's limits for a subscription's listing.
+    for key, limit in (("name", 55), ("description", 80)):
+        if not 0 < len(subscriptions.get(key, "")) <= limit:
+            problems.append(f"subscriptions.json: {key} must have 1 to {limit} characters")
+    benefits = subscriptions.get("benefits", [])
+    if len(benefits) > 4 or any(not 0 < len(b) <= 40 for b in benefits):
+        problems.append("subscriptions.json: at most 4 benefits, each 1 to 40 characters")
     plans = {plan["base_plan_id"]: plan for plan in subscriptions.get("base_plans", [])}
     in_app = {constant(products, "MONTHLY"), constant(products, "YEARLY")}
     if set(plans) != in_app:

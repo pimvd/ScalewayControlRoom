@@ -166,7 +166,10 @@ same split as iOS:
   promoted by hand in the Play Console. The upload signs in to Google Cloud
   without a key (Workload Identity Federation; the organization forbids
   service account keys), with the `PLAY_WORKLOAD_IDENTITY_PROVIDER` and
-  `PLAY_SERVICE_ACCOUNT` repository variables. Also as a signed APK on GitHub
+  `PLAY_SERVICE_ACCOUNT` repository variables. Run by hand, it can also push
+  the store listing, graphics and the Pro subscription from `PlayStore/`
+  (`scripts/sync_play.py`, tests in `scripts/tests/`), as `release.yml` does
+  for the App Store. Also as a signed APK on GitHub
   Releases (`android-v<version>`, manual), where Play Billing cannot work, so
   that build has every feature free; users install it by hand or with
   Obtainium.
@@ -205,4 +208,5 @@ In `ios/`: `swift test` in `Packages/ControlRoomKit`,
 builds with Xcode (CI or a Mac).
 
 In `android/`: `./gradlew :kit:test :app:testDebugUnitTest :app:assembleDebug`,
-`python3 scripts/validate_listing.py`.
+`python3 scripts/validate_listing.py`,
+`python3 -m unittest discover -s scripts/tests -t .`.

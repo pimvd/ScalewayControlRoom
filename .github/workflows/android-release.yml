@@ -38,6 +38,18 @@ on:
         type: choice
         options: [play, github]
         default: play
+      upload_build:
+        description: Build and upload the app
+        type: boolean
+        default: true
+      push_listing:
+        description: "Play: push the store listing and graphics (android/PlayStore)"
+        type: boolean
+        default: false
+      push_subscriptions:
+        description: "Play: create or update the Pro subscription (android/PlayStore/subscriptions.json)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -49,8 +61,11 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # A push has no inputs: it goes to Google Play.
+  # A push has no inputs: it builds and goes to Google Play.
   CHANNEL: ${{ inputs.channel || 'play' }}
+  # (Not `inputs.upload_build != false`: in expressions a push's missing
+  # input equals false.)
+  BUILD: ${{ github.event_name != 'workflow_dispatch' || inputs.upload_build }}
 
 defaults:
   run:
@@ -77,6 +92,7 @@ jobs:
         run: python3 scripts/validate_listing.py
 
       - name: Write the upload key
+        if: env.BUILD == 'true'
         env:
           UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
           UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
@@ -95,6 +111,7 @@ jobs:
           echo "UPLOAD_KEYSTORE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
 
       - name: Tests and build
+        if: env.BUILD == 'true'
         env:
           UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
           UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
@@ -110,7 +127,7 @@ jobs:
           ./gradlew :kit:test :app:testDebugUnitTest ":app:$task" -Pstore="$store" -PversionCode="$number" --console=plain
 
       - name: Publish the GitHub release
-        if: env.CHANNEL == 'github'
+        if: env.CHANNEL == 'github' && env.BUILD == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -144,7 +161,7 @@ jobs:
       # Kept also when the upload fails: Play wants the very first bundle
       # uploaded by hand in the Play Console.
       - name: Keep the bundle
-        if: env.CHANNEL == 'play' && always()
+        if: env.CHANNEL == 'play' && env.BUILD == 'true' && always()
         uses: actions/upload-artifact@v7
         with:
           name: android-play-${{ env.BUILD_NUMBER || github.run_number }}
@@ -174,7 +191,7 @@ jobs:
           service_account: ${{ vars.PLAY_SERVICE_ACCOUNT || secrets.PLAY_SERVICE_ACCOUNT }}
 
       - name: Upload to Google Play's internal track
-        if: env.CHANNEL == 'play'
+        if: env.CHANNEL == 'play' && env.BUILD == 'true'
         uses: r0adkll/upload-google-play@v1.1.5
         with:
           serviceAccountJson: ${{ steps.google.outputs.credentials_file_path }}
@@ -183,6 +200,20 @@ jobs:
           mappingFile: android/app/build/outputs/mapping/release/mapping.txt
           tracks: internal
           status: ${{ vars.PLAY_RELEASE_STATUS || secrets.PLAY_RELEASE_STATUS || 'completed' }}
+
+      # The service account needs "Manage store presence" for these.
+      - name: Push the subscription and the store listing
+        if: env.CHANNEL == 'play' && (inputs.push_subscriptions || inputs.push_listing)
+        env:
+          PUSH_SUBSCRIPTIONS: ${{ inputs.push_subscriptions }}
+          PUSH_LISTING: ${{ inputs.push_listing }}
+        run: |
+          python3 -m venv "$RUNNER_TEMP/play-venv"
+          "$RUNNER_TEMP/play-venv/bin/pip" install --quiet google-auth requests
+          args=()
+          [ "$PUSH_SUBSCRIPTIONS" = true ] && args+=(--subscriptions)
+          [ "$PUSH_LISTING" = true ] && args+=(--listing)
+          "$RUNNER_TEMP/play-venv/bin/python" scripts/sync_play.py "${args[@]}"
 
       - name: Remove the upload key
         if: always()

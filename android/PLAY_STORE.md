@@ -50,13 +50,18 @@ release to production in the Play Console. The signed APK on GitHub Releases
 5. **The first bundle by hand.** Play wants the very first upload done in
    the Play Console: run the Android release workflow (channel `play`), take
    the bundle from the run's artifacts, and upload it to the internal track.
-6. **The subscription**, from `PlayStore/subscriptions.json`: product `pro`
-   with base plans `yearly` (P1Y, €19.99) and `monthly` (P1M, €1.99),
-   auto-renewing. The IDs must match `ProProducts` (checked by
+6. **The subscription and the store listing**, pushed from `PlayStore/` by
+   `scripts/sync_play.py`, as `sync_subscriptions.py` and fastlane do for the
+   iPhone app: give the service account *Manage store presence* for the app
+   in the Play Console, then run the Android release workflow with
+   `push_subscriptions` and `push_listing` on (`upload_build` off to push only
+   those). The subscription is `pro` with base plans `yearly` (P1Y, €19.99)
+   and `monthly` (P1M, €1.99), priced in euros and converted by Google for
+   every other region; the IDs must match `ProProducts` (checked by
    `scripts/validate_listing.py`). Add yourself as a license tester to buy it
    without being charged.
-7. **The store listing** from `PlayStore/listing.json`, with `icon-512.png`,
-   `feature-graphic.png` and `screenshots/phone/`.
+7. **The store listing's other settings** in the Play Console, once: the app's
+   category, contact email and website (Store settings).
 8. **App content:** privacy policy URL, ads: none, data safety: no data
    collected or shared (keys never leave the phone except to Scaleway's API),
    content rating questionnaire (a developer tool: Everyone), target
