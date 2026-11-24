@@ -163,7 +163,10 @@ same split as iOS:
 
 - Distributed on Google Play: every push to master that changes `android/`
   uploads the bundle (Play Billing) to the internal track; production is
-  promoted by hand in the Play Console. Also as a signed APK on GitHub
+  promoted by hand in the Play Console. The upload signs in to Google Cloud
+  without a key (Workload Identity Federation; the organization forbids
+  service account keys), with the `PLAY_WORKLOAD_IDENTITY_PROVIDER` and
+  `PLAY_SERVICE_ACCOUNT` repository variables. Also as a signed APK on GitHub
   Releases (`android-v<version>`, manual), where Play Billing cannot work, so
   that build has every feature free; users install it by hand or with
   Obtainium.

@@ -13,8 +13,12 @@
 #   UPLOAD_KEYSTORE_PASSWORD  its password
 #   UPLOAD_KEY_ALIAS          the key's alias
 #   UPLOAD_KEY_PASSWORD       the key's password
-#   PLAY_SERVICE_ACCOUNT_JSON a Google Cloud service account's JSON key, with
-#                             release rights for the app in the Play Console
+# Repository variables for the upload to Play, without a key: GitHub proves
+# to Google Cloud that the run is this repository's (Workload Identity
+# Federation), and may then act as a service account with release rights in
+# the Play Console. android/PLAY_STORE.md sets them up.
+#   PLAY_WORKLOAD_IDENTITY_PROVIDER  projects/<number>/locations/global/workloadIdentityPools/github/providers/github
+#   PLAY_SERVICE_ACCOUNT             github-upload@<project>.iam.gserviceaccount.com
 # Every release must be signed with this same key, or Play and phones refuse
 # the update.
 # Repository variable PLAY_RELEASE_STATUS: `completed` (the default) sends the
@@ -37,6 +41,8 @@ on:
 
 permissions:
   contents: write
+  # Proves to Google Cloud that the run is this repository's.
+  id-token: write
 
 concurrency:
   group: android-release
@@ -151,18 +157,27 @@ jobs:
       - name: Check the service account
         if: env.CHANNEL == 'play'
         env:
-          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          PROVIDER: ${{ vars.PLAY_WORKLOAD_IDENTITY_PROVIDER }}
+          ACCOUNT: ${{ vars.PLAY_SERVICE_ACCOUNT }}
         run: |
-          if [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
-            echo "::error::Missing repository secret PLAY_SERVICE_ACCOUNT_JSON, so the bundle was not uploaded. It is kept as an artifact of this run. See android/PLAY_STORE.md."
+          if [ -z "$PROVIDER" ] || [ -z "$ACCOUNT" ]; then
+            echo "::error::Missing repository variable PLAY_WORKLOAD_IDENTITY_PROVIDER or PLAY_SERVICE_ACCOUNT, so the bundle was not uploaded. It is kept as an artifact of this run. See android/PLAY_STORE.md."
             exit 1
           fi
+
+      - name: Sign in to Google Cloud
+        if: env.CHANNEL == 'play'
+        id: google
+        uses: google-github-actions/auth@v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.PLAY_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.PLAY_SERVICE_ACCOUNT }}
 
       - name: Upload to Google Play's internal track
         if: env.CHANNEL == 'play'
         uses: r0adkll/upload-google-play@v1.1.5
         with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          serviceAccountJson: ${{ steps.google.outputs.credentials_file_path }}
           packageName: com.pvd.scwcontrolroom
           releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
           mappingFile: android/app/build/outputs/mapping/release/mapping.txt

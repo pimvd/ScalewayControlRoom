@@ -12,14 +12,37 @@ release to production in the Play Console. The signed APK on GitHub Releases
    free, category Tools.
 2. **The upload key.** The four `UPLOAD_*` secrets from `DISTRIBUTION.md`;
    Play App Signing holds the key Play signs with.
-3. **The service account**, as the `PLAY_SERVICE_ACCOUNT_JSON` secret:
-   1. In the Google Cloud console, pick or create a project and enable the
-      *Google Play Android Developer API*.
-   2. IAM → Service accounts: create one, then Keys → Add key → JSON. The
-      file's contents are the secret.
+3. **The upload rights, without a key.** Google Cloud organizations block
+   service account keys by default, so GitHub signs in with Workload
+   Identity Federation instead: Google trusts this repository's workflow runs
+   and lets them act as a service account.
+   1. In the Google Cloud console, select the project, open Cloud Shell (the
+      `>_` button at the top) and paste:
+      ```sh
+      PROJECT=$(gcloud config get-value project)
+      NUMBER=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
+      REPO=pimvd/ScalewayControlRoom
+      gcloud services enable androidpublisher.googleapis.com iamcredentials.googleapis.com
+      gcloud iam service-accounts describe "github-upload@$PROJECT.iam.gserviceaccount.com" >/dev/null 2>&1 ||
+        gcloud iam service-accounts create github-upload --display-name="GitHub upload to Play"
+      gcloud iam workload-identity-pools create github --location=global --display-name=GitHub
+      gcloud iam workload-identity-pools providers create-oidc github --location=global \
+        --workload-identity-pool=github --issuer-uri=https://token.actions.githubusercontent.com \
+        --attribute-mapping=google.subject=assertion.sub,attribute.repository=assertion.repository \
+        --attribute-condition="assertion.repository=='$REPO'"
+      gcloud iam service-accounts add-iam-policy-binding "github-upload@$PROJECT.iam.gserviceaccount.com" \
+        --role=roles/iam.workloadIdentityUser \
+        --member="principalSet://iam.googleapis.com/projects/$NUMBER/locations/global/workloadIdentityPools/github/attribute.repository/$REPO"
+      echo
+      echo "PLAY_WORKLOAD_IDENTITY_PROVIDER = projects/$NUMBER/locations/global/workloadIdentityPools/github/providers/github"
+      echo "PLAY_SERVICE_ACCOUNT            = github-upload@$PROJECT.iam.gserviceaccount.com"
+      ```
+   2. Add the two printed values as repository **variables** (not secrets;
+      they are not secret) on GitHub: Settings → Secrets and variables →
+      Actions → Variables.
    3. In the Play Console, Users and permissions → Invite new users: the
-      service account's email address, with the app under App permissions
-      and at least *Release apps to testing tracks*.
+      service account's email address (`PLAY_SERVICE_ACCOUNT`), with the app
+      under App permissions and at least *Release apps to testing tracks*.
 4. **Draft releases first.** Set the repository variable
    `PLAY_RELEASE_STATUS` to `draft`: a Play app that has never been
    published only accepts drafts. Remove it once the first release is out;
