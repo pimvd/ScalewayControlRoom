@@ -181,7 +181,7 @@ jobs:
           packageName: com.pvd.scwcontrolroom
           releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
           mappingFile: android/app/build/outputs/mapping/release/mapping.txt
-          track: internal
+          tracks: internal
           status: ${{ vars.PLAY_RELEASE_STATUS || secrets.PLAY_RELEASE_STATUS || 'completed' }}
 
       - name: Remove the upload key
