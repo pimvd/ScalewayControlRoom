@@ -36,10 +36,10 @@ cd android
 ./gradlew :app:recordRoborazziDebug           # Play Store screenshots
 ```
 
-The app is published as a signed APK on this repository's GitHub Releases,
-with every feature free; see `android/DISTRIBUTION.md`. Debug builds sell Pro
-from a local test store. Publishing on Google Play later:
-`android/PLAY_STORE.md`.
+Every push to master that changes the app uploads it to Google Play's
+internal test track (`android/PLAY_STORE.md`). It is also published by hand as
+a signed APK on this repository's GitHub Releases, with every feature free
+(`android/DISTRIBUTION.md`). Debug builds sell Pro from a local test store.
 
 ## Release
 
@@ -52,9 +52,9 @@ from a local test store. Publishing on Google Play later:
   `ASC_ISSUER_ID` and `ASC_KEY_P8` secrets; see the workflow.
 - **Screenshots** (`screenshots.yml`) takes the App Store screenshots of the
   demo in the simulator and commits them.
-- **Android release** (`android-release.yml`) publishes the signed APK as a
-  GitHub Release, or builds a Play bundle (its upload to Google Play is not
-  set up yet).
+- **Android release** (`android-release.yml`) uploads each Android change on
+  master to Google Play's internal track; started by hand, it can also
+  publish the signed APK as a GitHub Release.
 - **Android screenshots** (`android-screenshots.yml`) renders the Play Store
   screenshots and commits them.
 - Store text lives in `ios/AppStore/` and `android/PlayStore/`. What has to

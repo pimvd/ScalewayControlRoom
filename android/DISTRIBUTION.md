@@ -32,9 +32,9 @@ Lose the key and every user has to uninstall and install again.
    keytool -list -v -keystore upload.jks -alias upload | grep SHA256
    ```
 
-The same key works as the upload key if the app goes to Google Play later
-(see `PLAY_STORE.md`). Play re-signs apps with its own key, so moving from
-the GitHub version to the Play version means installing once more.
+The same key is the upload key for Google Play (`PLAY_STORE.md`). Play
+re-signs apps with its own key, so moving from the GitHub version to the
+Play version means installing once more.
 
 ## Each release
 

@@ -1,7 +1,6 @@
 # Finding testers
 
-Only needed if the app goes to Google Play; for now it is distributed on
-GitHub (`DISTRIBUTION.md`). Google lets a new personal developer account into
+Only needed with a personal developer account. Google lets a new personal developer account into
 production only after a closed test with at least 12 testers who stay opted
 in for 14 days in a row.
 Aim for 15–20. Testers need an Android phone and a Google account, not a
@@ -41,8 +40,8 @@ https://vandijkcloud.nl/Scaleway-ControlRoom/android-test.html.
 > own key. No backend, no tracking.
 >
 > Before it can go into the Play Store, Google wants 12 testers for 14 days.
-> You don't need a Scaleway account: the built-in demo shows every feature,
-> and Pro is free during the test. Joining takes two minutes:
+> You don't need a Scaleway account: the built-in demo shows every feature.
+> Joining takes two minutes:
 > https://vandijkcloud.nl/Scaleway-ControlRoom/android-test.html
 >
 > Feedback very welcome, and reposts too. (Independent app, not made by Scaleway.)

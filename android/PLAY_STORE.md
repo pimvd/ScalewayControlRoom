@@ -1,44 +1,46 @@
-# Google Play: what is mocked, and what to do to publish there
+# Google Play
 
-For now the app is distributed on GitHub (`DISTRIBUTION.md`), not on Google
-Play. Publishing on Play later needs the steps below; everything that needs
-the Play Console is mocked or left as a placeholder, the rest is ready.
+Every push to master that changes the Android app builds the bundle with
+Pro sold through Google Play Billing (`-Pstore=play`) and uploads it to the
+internal testing track (`.github/workflows/android-release.yml`). Promote a
+release to production in the Play Console. The signed APK on GitHub Releases
+(`DISTRIBUTION.md`) stays available, with every feature free.
 
-## Mocked for now
+## Setting it up, once
 
-- **Billing.** The app sells Pro from a local test store (`MockProStore`): a
-  purchase only sets a flag on the device, and Settings can cancel it again.
-  The real Google Play Billing client (`PlayProStore`) is written and builds,
-  but is only used when the app is built with `-Pstore=play`.
-- **Upload.** The Android release workflow (channels `play-test` and `play`)
-  builds the bundle and keeps it as an artifact; its "Upload to Google Play"
-  step only prints a notice.
-
-## Once the account exists
-
-1. Create the developer account (one-time fee) and the app
-   `com.pvd.scwcontrolroom`, free, category Tools.
-2. Use the GitHub releases' signing key as the upload key (`DISTRIBUTION.md`);
+1. **The app.** In the Play Console, create the app `com.pvd.scwcontrolroom`,
+   free, category Tools.
+2. **The upload key.** The four `UPLOAD_*` secrets from `DISTRIBUTION.md`;
    Play App Signing holds the key Play signs with.
-3. Run the Android release workflow with channel `play-test` and upload its bundle to a closed
-   testing track by hand: Play requires the first one to be uploaded in the
-   Play Console. A new personal account needs 12 testers opted in for 14 days
-   before production; see `TESTERS.md`. The test builds keep the test store,
-   so testers get Pro for free (the tester page says so).
-4. Create the subscription from `PlayStore/subscriptions.json`: product `pro`
+3. **The service account**, as the `PLAY_SERVICE_ACCOUNT_JSON` secret:
+   1. In the Google Cloud console, pick or create a project and enable the
+      *Google Play Android Developer API*.
+   2. IAM → Service accounts: create one, then Keys → Add key → JSON. The
+      file's contents are the secret.
+   3. In the Play Console, Users and permissions → Invite new users: the
+      service account's email address, with the app under App permissions
+      and at least *Release apps to testing tracks*.
+4. **Draft releases first.** Set the repository variable
+   `PLAY_RELEASE_STATUS` to `draft`: a Play app that has never been
+   published only accepts drafts. Remove it once the first release is out;
+   from then on each upload goes straight to the internal testers.
+5. **The first bundle by hand.** Play wants the very first upload done in
+   the Play Console: run the Android release workflow (channel `play`), take
+   the bundle from the run's artifacts, and upload it to the internal track.
+6. **The subscription**, from `PlayStore/subscriptions.json`: product `pro`
    with base plans `yearly` (P1Y, €19.99) and `monthly` (P1M, €1.99),
    auto-renewing. The IDs must match `ProProducts` (checked by
-   `scripts/validate_listing.py`).
-5. Fill in the store listing from `PlayStore/listing.json`, with
-   `icon-512.png`, `feature-graphic.png` and `screenshots/phone/`.
-6. App content: privacy policy URL, ads: none, data safety: no data collected
-   or shared (keys never leave the phone except to Scaleway's API), content
-   rating questionnaire (a developer tool: Everyone), target audience 18+.
-7. For production, run the workflow with channel `play` (`-Pstore=play`), so
-   Pro is sold through Google Play. Add yourself as a license tester to buy it without being charged.
-8. Add a Google Cloud service account with release rights in the Play
-   Console as the `PLAY_SERVICE_ACCOUNT_JSON` secret, and replace the
-   placeholder step in `.github/workflows/android-release.yml` with
-   `r0adkll/upload-google-play` to the internal track.
-9. In-app reviews only show for apps installed from Google Play; nothing to
-   set up.
+   `scripts/validate_listing.py`). Add yourself as a license tester to buy it
+   without being charged.
+7. **The store listing** from `PlayStore/listing.json`, with `icon-512.png`,
+   `feature-graphic.png` and `screenshots/phone/`.
+8. **App content:** privacy policy URL, ads: none, data safety: no data
+   collected or shared (keys never leave the phone except to Scaleway's API),
+   content rating questionnaire (a developer tool: Everyone), target
+   audience 18+.
+9. **Testers before production.** A personal developer account needs a
+   closed test with 12 testers for 14 days first (`TESTERS.md`); an
+   organization account does not.
+
+In-app reviews only show for apps installed from Google Play; nothing to set
+up. Debug builds keep the local test store (`MockProStore`).

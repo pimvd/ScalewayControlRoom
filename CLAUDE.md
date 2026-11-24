@@ -85,7 +85,7 @@ same split as iOS:
   Releases, and the signing key.
 - `PlayStore/` the listing, subscriptions, graphics and the closed test's
   tester page; `scripts/validate_listing.py` checks them against the app.
-  `PLAY_STORE.md` and `TESTERS.md`: the steps to publish on Google Play later.
+  `PLAY_STORE.md`: the Google Play setup; `TESTERS.md`: finding testers.
 
 ### Shared
 
@@ -161,14 +161,16 @@ same split as iOS:
 
 ## Android specifics
 
-- Distributed as a signed APK on GitHub Releases (`android-v<version>`),
-  not on Google Play: there, Play Billing cannot work, so that build has
-  every feature free. Users install it by hand or with Obtainium.
+- Distributed on Google Play: every push to master that changes `android/`
+  uploads the bundle (Play Billing) to the internal track; production is
+  promoted by hand in the Play Console. Also as a signed APK on GitHub
+  Releases (`android-v<version>`, manual), where Play Billing cannot work, so
+  that build has every feature free; users install it by hand or with
+  Obtainium.
 - `-Pstore` picks where Pro comes from: `test` (default; `MockProStore`, a
   local test store like Xcode's StoreKit configuration), `github`
   (`FreeProStore`, everything free) or `play` (`PlayProStore`, Google Play
-  Billing, product `pro` with base plans `yearly` and `monthly`). The release
-  workflow's Play upload is a placeholder.
+  Billing, product `pro` with base plans `yearly` and `monthly`).
 - Rating: Play's in-app review, at the same milestones.
 - The screenshot route is the `screenshotRoute` intent extra.
 - Version: `versionCode` is the commit count, passed as `-PversionCode`;
@@ -178,8 +180,9 @@ same split as iOS:
 ## Workflows
 
 `ci.yml` (every push, any branch: validators, package tests, simulator build,
-Android tests and debug build), `android-release.yml` (manual: the signed APK
-as a GitHub Release, or a Play bundle whose upload is not set up), `android-screenshots.yml` (manual, commits them),
+Android tests and debug build), `android-release.yml` (Android changes on
+master: the bundle to Play's internal track; manual: also the signed APK as a
+GitHub Release), `android-screenshots.yml` (manual, commits them),
 `release.yml` (TestFlight, metadata and subscriptions, manual),
 `screenshots.yml` (simulator screenshots, manual, commits them),
 `website.yml` (on website changes and after Screenshots).
