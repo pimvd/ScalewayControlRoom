@@ -10,7 +10,7 @@ name: Website
 on:
   push:
     branches: [master]
-    paths: [website/**, AppStore/screenshots/**, ControlRoom/Resources/Assets.xcassets/AppIcon.appiconset/**, .github/workflows/website.yml]
+    paths: [website/**, ios/AppStore/screenshots/**, ios/ControlRoom/Resources/Assets.xcassets/AppIcon.appiconset/**, .github/workflows/website.yml]
   workflow_run:
     workflows: [Screenshots]
     types: [completed]
@@ -35,8 +35,8 @@ jobs:
         run: |
           mkdir -p site/screenshots
           cp -R website/. site/
-          cp ControlRoom/Resources/Assets.xcassets/AppIcon.appiconset/icon.png site/icon.png
-          cp AppStore/screenshots/en-US/*.png site/screenshots/ 2>/dev/null || echo "No screenshots yet."
+          cp ios/ControlRoom/Resources/Assets.xcassets/AppIcon.appiconset/icon.png site/icon.png
+          cp ios/AppStore/screenshots/en-US/*.png site/screenshots/ 2>/dev/null || echo "No screenshots yet."
           find site -type f | sort
 
       - name: Upload to FTP

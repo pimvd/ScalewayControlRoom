@@ -1,0 +1,19 @@
+{
+  "package_name": "com.pvd.scwcontrolroom",
+  "default_language": "en-US",
+  "category": "TOOLS",
+  "content_rating": "Everyone",
+  "contains_ads": false,
+  "privacy_url": "https://vandijkcloud.nl/Scaleway-ControlRoom/privacy.html",
+  "support_url": "https://vandijkcloud.nl/Scaleway-ControlRoom/support.html",
+  "website": "https://vandijkcloud.nl/Scaleway-ControlRoom/",
+  "data_safety": "No data collected or shared",
+  "languages": {
+    "en-US": {
+      "title": "Scaleway ControlRoom",
+      "short_description": "Stop idle Scaleway servers in two taps and see what your organization costs.",
+      "full_description": "Every hour an idle Scaleway instance runs, you pay for it. ControlRoom puts all your instances in your pocket, so stopping one takes two taps instead of a laptop.\n\nALL YOUR INSTANCES IN ONE LIST\nEvery zone, every project, running instances first, with their price per hour. Search by name or tag, or show only what is running.\n\nSTART, STOP AND REBOOT\nStop the staging server you forgot, start it again when you need it, or reboot a stuck machine. Stopping asks first, so nothing goes down by accident.\n\nLOGS AND METRICS\nSee the logs and metrics of your serverless containers, functions and jobs straight from Cockpit, as charts and log lines, for the last 15 minutes, hour or day. For instances, the app shows how to start sending both.\n\nEVERYTHING ELSE\nDatabases, Redis, volumes, load balancers, IPs, domains, transactional email, secrets and more, in one searchable list grouped by type, location or project.\n\nSEE WHAT IT COSTS\nYour organization's costs so far this month, straight from Scaleway billing, with a breakdown by category and by project and the months before.\n\nSEVERAL ORGANIZATIONS\nAdd an API key for each organization or project. When two keys can see the same instance, it is shown once.\n\nPRIVATE BY DESIGN\n- Your API keys are stored encrypted on your phone, with a key that never leaves it\n- The app talks only to Scaleway's own API: there is no ControlRoom server\n- No account, no analytics, no tracking\n- Use a key with only the permissions you want the app to have\n\nCONTROLROOM PRO\nFree: your instances, starting, stopping and rebooting them, and this month's total cost. Pro adds serverless containers, functions and jobs, every other resource, logs and metrics, cost details by category and project with the months before, and more than one API key.\n\nPro is an auto-renewing subscription, monthly or yearly, through Google Play; the price in your currency is shown in the app before you buy. It renews until you cancel it in Google Play.\n\nTRY IT WITHOUT A KEY\nThe built-in demo shows the whole app with made-up servers and costs.\n\nControlRoom is an independent app. It is not made, endorsed or supported by Scaleway.\n\nPrivacy Policy: https://vandijkcloud.nl/Scaleway-ControlRoom/privacy.html",
+      "release_notes": "First release."
+    }
+  }
+}

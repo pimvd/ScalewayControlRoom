@@ -1,25 +1,35 @@
 # Scaleway ControlRoom
 
-iPhone app (SwiftUI, iOS 17+) that lists Scaleway instances across all zones,
-starts/stops/reboots them, shows serverless apps with their Cockpit logs and
-metrics, and shows monthly costs from the Billing API. No backend: the app calls
-`api.scaleway.com` with the user's API keys, which live in the keychain.
+iPhone app (SwiftUI, iOS 17+) and Android app (Kotlin, Jetpack Compose,
+Android 9+) that list Scaleway instances across all zones, start/stop/reboot
+them, show serverless apps with their Cockpit logs and metrics, and show monthly
+costs from the Billing API. No backend: the apps call `api.scaleway.com` with
+the user's API keys, which live in the keychain (iOS) or encrypted with an
+Android Keystore key (Android).
+
+The two apps are twins: same screens, same behaviour, same demo. A change to
+one goes into the other too, unless it is about the platform.
 
 ## Rules
 
 - KISS, DRY, YAGNI. Build what is asked, nothing speculative.
 - English only: code, UI text, docs, commits. No localization.
 - Work on `master` for now.
-- iPhone only, portrait. No widgets, no Siri/Shortcuts, no alerts, no
-  backend, no "you saved" figure, no Android.
+- Phones only, portrait. No widgets, no Siri/Shortcuts, no alerts, no
+  backend, no "you saved" figure.
 - Never use Scaleway's logo or colours, and never "Control Center" (Apple's).
   The description must keep saying the app is not made by Scaleway; the
   metadata validator enforces it.
 
 ## Layout
 
+`ios/` holds the iPhone app and its App Store pipeline, `android/` the Android
+app and its Play Store files. `website/` and `docs/` are shared.
+
+### ios/
+
 Same structure as the owner's FreeCubeSolver: an Xcode project plus a local
-Swift package for everything that is not UI.
+Swift package for everything that is not UI. Paths below are inside `ios/`.
 
 - `Packages/ControlRoomKit` (Foundation only, builds and tests on macOS and
   Linux with `swift test`):
@@ -33,7 +43,8 @@ Swift package for everything that is not UI.
     formatting, key validation, the rating rule.
   - `Commands.swift` the copyable scw CLI and shell commands of the setup
     screens. `website/support.html` repeats the key setup commands and
-    `docs/instance-logs-and-metrics.md` the Alloy ones; keep them in step.
+    `docs/instance-logs-and-metrics.md` the Alloy ones; keep them in step
+    (and Android's `Commands.kt`).
   - `Resources.swift` the Other tab: `Products.all` (one line per product
     list endpoint, read as plain JSON), `listResources` (a few requests at a
     time), rows and grouping.
@@ -50,7 +61,36 @@ Swift package for everything that is not UI.
 - `StoreKit/ControlRoom.storekit` the scheme's StoreKit configuration, so
   running from Xcode buys from a local test store.
 - `AppStore/`, `scripts/`, `MANUAL_METADATA.md`: the store pipeline.
-- `website/`: marketing page, support (also the key setup guide) and privacy.
+
+### android/
+
+A Gradle project (`./gradlew`, JDK 21, Android SDK) with two modules, the
+same split as iOS:
+
+- `kit` (plain Kotlin/JVM, `./gradlew :kit:test`): the port of
+  ControlRoomKit, file for file (`Models.kt`, `ScalewayApi.kt`, `Demo.kt`,
+  `Logic.kt`, `Commands.kt`, `Resources.kt`, `Navigation.kt`), with the
+  Swift tests ported. Scaleway's JSON is read as kotlinx `JsonElement`.
+  Numbers are rounded as Swift's `String(format:)` does (`fixed`), names
+  sorted as `localizedStandardCompare` does (`naturalOrder`).
+- `app` (Compose, Material 3): `model/` (`AppModel` with Compose state,
+  `KeyStore`, `ProStore`, `Links`), `ui/` one file per tab plus
+  `Components.kt` and `Chart.kt` (a Canvas chart in place of Swift Charts).
+  Navigation is a stack of `Destination`s per tab in `Root.kt`, as on iOS.
+- `app/src/test/.../ScreenshotTest.kt`: Robolectric opens each screenshot
+  route of the demo and checks it; `./gradlew :app:recordRoborazziDebug`
+  also saves the Play Store pictures to `PlayStore/screenshots/phone`. No
+  emulator needed.
+- `DISTRIBUTION.md`: how the app is published, as a signed APK on GitHub
+  Releases, and the signing key.
+- `PlayStore/` the listing, subscriptions, graphics and the closed test's
+  tester page; `scripts/validate_listing.py` checks them against the app.
+  `PLAY_STORE.md` and `TESTERS.md`: the steps to publish on Google Play later.
+
+### Shared
+
+- `website/`: marketing page, support (also the key setup guide and the
+  Android install guide, `support.html#android`) and privacy.
   The Website workflow uploads it with the app icon and the App Store
   screenshots to `vandijkcloud.nl/Scaleway-ControlRoom/` over FTP.
 
@@ -119,9 +159,27 @@ Swift package for everything that is not UI.
 - The build number is the git commit count, passed to `xcodebuild archive` as
   `CURRENT_PROJECT_VERSION`; the version is `MARKETING_VERSION` in the project.
 
+## Android specifics
+
+- Distributed as a signed APK on GitHub Releases (`android-v<version>`),
+  not on Google Play: there, Play Billing cannot work, so that build has
+  every feature free. Users install it by hand or with Obtainium.
+- `-Pstore` picks where Pro comes from: `test` (default; `MockProStore`, a
+  local test store like Xcode's StoreKit configuration), `github`
+  (`FreeProStore`, everything free) or `play` (`PlayProStore`, Google Play
+  Billing, product `pro` with base plans `yearly` and `monthly`). The release
+  workflow's Play upload is a placeholder.
+- Rating: Play's in-app review, at the same milestones.
+- The screenshot route is the `screenshotRoute` intent extra.
+- Version: `versionCode` is the commit count, passed as `-PversionCode`;
+  `versionName` is iOS's `MARKETING_VERSION` plus that number (`1.0.57`), so
+  every GitHub release has a version Obtainium can compare.
+
 ## Workflows
 
-`ci.yml` (every push: validators, package tests, simulator build),
+`ci.yml` (every push, any branch: validators, package tests, simulator build,
+Android tests and debug build), `android-release.yml` (manual: the signed APK
+as a GitHub Release, or a Play bundle whose upload is not set up), `android-screenshots.yml` (manual, commits them),
 `release.yml` (TestFlight, metadata and subscriptions, manual),
 `screenshots.yml` (simulator screenshots, manual, commits them),
 `website.yml` (on website changes and after Screenshots).
@@ -135,7 +193,10 @@ the minimum again.
 
 ## Checks
 
-`swift test` in `Packages/ControlRoomKit`, `python3 scripts/validate_metadata.py`,
-`python3 scripts/validate_subscriptions.py`,
+In `ios/`: `swift test` in `Packages/ControlRoomKit`,
+`python3 scripts/validate_metadata.py`, `python3 scripts/validate_subscriptions.py`,
 `python3 -m unittest discover -s scripts/tests -t .`. The app target only
 builds with Xcode (CI or a Mac).
+
+In `android/`: `./gradlew :kit:test :app:testDebugUnitTest :app:assembleDebug`,
+`python3 scripts/validate_listing.py`.

@@ -2,7 +2,7 @@
 xcuserdata/
 DerivedData/
 *.xcuserstate
-/build/
+build/
 
 # Swift Package Manager
 .build/
@@ -20,3 +20,10 @@ __pycache__/
 *.mobileprovision
 
 .DS_Store
+
+# Gradle (android/)
+.gradle/
+.kotlin/
+local.properties
+*.jks
+*.keystore

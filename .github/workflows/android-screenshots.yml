@@ -1,13 +1,59 @@
-# Placeholder, so GitHub offers this manual workflow. The real one lives on
-# the branch with the Android app (android/): run it from there, choosing
-# that branch under "Use workflow from". Merging the branch replaces this file.
+# Takes the Play Store screenshots of the demo and commits them to
+# android/PlayStore/screenshots/phone. No emulator: Robolectric renders the
+# app on the JVM (app/src/test/.../ScreenshotTest.kt).
 name: Android screenshots
 
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
+concurrency:
+  group: android-screenshots
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: android
+
 jobs:
-  placeholder:
+  screenshots:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - run: echo "::notice::Run this workflow from the branch that holds android/."
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Take the screenshots
+        run: ./gradlew :app:recordRoborazziDebug --console=plain
+
+      - name: Keep them as an artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-screenshots
+          path: android/PlayStore/screenshots/phone/*.png
+          retention-days: 14
+
+      - name: Commit them
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add PlayStore/screenshots/phone
+          if git diff --cached --quiet; then
+            echo "Screenshots unchanged."
+            exit 0
+          fi
+          git commit -m "Update Play Store screenshots"
+          for attempt in 1 2 3; do
+            git pull --rebase --autostash origin "$GITHUB_REF_NAME"
+            git push origin "HEAD:$GITHUB_REF_NAME" && exit 0
+            sleep 5
+          done
+          exit 1

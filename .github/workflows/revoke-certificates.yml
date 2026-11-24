@@ -13,6 +13,11 @@ concurrency:
   group: release
   cancel-in-progress: false
 
+# The iOS app lives in ios/.
+defaults:
+  run:
+    working-directory: ios
+
 jobs:
   revoke:
     runs-on: ubuntu-latest

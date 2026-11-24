@@ -1,9 +1,8 @@
-# Checks every push to master and every pull request. Needs no secrets.
+# Checks every push and every pull request. Needs no secrets.
 name: CI
 
 on:
   push:
-    branches: [master]
   pull_request:
   workflow_dispatch:
 
@@ -19,14 +18,22 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: App Store metadata and subscriptions
+        working-directory: ios
         run: |
           python3 scripts/validate_metadata.py
           python3 scripts/validate_subscriptions.py
           python3 -m unittest discover -s scripts/tests -t .
 
+      - name: Play Store listing and subscriptions
+        working-directory: android
+        run: python3 scripts/validate_listing.py
+
   ios:
     runs-on: xcode-27
     timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: ios
     steps:
       - uses: actions/checkout@v7
 
@@ -35,7 +42,7 @@ jobs:
           xcode-version: latest-stable
 
       - name: Package tests (ControlRoomKit)
-        working-directory: Packages/ControlRoomKit
+        working-directory: ios/Packages/ControlRoomKit
         run: swift test 2>&1 | tee "$RUNNER_TEMP/package-tests.log"
         shell: bash -o pipefail {0}
 
@@ -59,4 +66,35 @@ jobs:
         with:
           name: ios-logs
           path: ${{ runner.temp }}/*.log
+          retention-days: 7
+
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      # The kit's tests, the app's screenshot test (every main screen of the
+      # demo, rendered by Robolectric), and a debug build.
+      - name: Tests and build
+        run: ./gradlew :kit:test :app:testDebugUnitTest :app:assembleDebug --console=plain
+
+      - name: Upload the test reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-reports
+          path: |
+            android/kit/build/reports/tests
+            android/app/build/reports/tests
           retention-days: 7
