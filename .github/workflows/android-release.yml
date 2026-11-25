@@ -193,11 +193,14 @@ jobs:
       # fastlane supply does for Google Play what deliver does for the
       # iPhone app; it signs in with the credentials the step above wrote
       # (GOOGLE_APPLICATION_CREDENTIALS). PlayStore/ is converted to its layout.
-      - name: Install fastlane
-        if: env.CHANNEL == 'play' && (env.BUILD == 'true' || inputs.push_listing)
+      - name: Install fastlane and the Play scripts' packages
+        if: env.CHANNEL == 'play' && (env.BUILD == 'true' || inputs.push_listing || inputs.push_subscriptions)
         run: |
           sudo gem install fastlane -v 2.241.2 --no-document
           python3 scripts/listing_to_fastlane.py
+          python3 -m venv "$RUNNER_TEMP/play-venv"
+          "$RUNNER_TEMP/play-venv/bin/pip" install --quiet google-auth requests
+          echo "PLAY_PYTHON=$RUNNER_TEMP/play-venv/bin/python" >> "$GITHUB_ENV"
 
       - name: Upload to Google Play's internal track
         if: env.CHANNEL == 'play' && env.BUILD == 'true'
@@ -216,14 +219,16 @@ jobs:
             --skip_upload_screenshots
 
       # The service account needs "Manage store presence" for these two.
-      # supply attaches a listing to a track's release: the internal one.
+      # supply attaches a listing to a release of a track: the newest internal one.
       - name: Push the store listing and graphics
         if: env.CHANNEL == 'play' && inputs.push_listing
         run: |
+          code=$("$PLAY_PYTHON" scripts/latest_version_code.py internal)
           fastlane supply \
             --package_name com.pvd.scwcontrolroom \
             --metadata_path fastlane/metadata/android \
             --track internal \
+            --version_code "$code" \
             --skip_upload_apk \
             --skip_upload_aab \
             --skip_upload_changelogs \
@@ -232,9 +237,7 @@ jobs:
       - name: Sync the Pro subscription
         if: env.CHANNEL == 'play' && inputs.push_subscriptions
         run: |
-          python3 -m venv "$RUNNER_TEMP/play-venv"
-          "$RUNNER_TEMP/play-venv/bin/pip" install --quiet google-auth requests
-          "$RUNNER_TEMP/play-venv/bin/python" scripts/sync_subscriptions.py
+          "$PLAY_PYTHON" scripts/sync_subscriptions.py
 
       - name: Remove the upload key
         if: always()
