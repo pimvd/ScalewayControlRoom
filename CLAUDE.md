@@ -110,8 +110,10 @@ same split as iOS:
   (`/prometheus/api/v1/...`). Names are not assumed: the app asks Cockpit for
   the metric names carrying `{resource_id="<id>"}` and shows them as a
   dashboard, a chart per metric with a line per `resource_instance`
-  (`metricQuery`: rate for counters, average otherwise; Swift Charts); tapping
-  one opens it large. Cockpit gives no metric types, so names decide, with
+  (`metricQuery`: rate for counters, over at least one step between points,
+  average otherwise; Swift Charts); tapping one opens it large. Logs and
+  metrics cover 15 minutes to 30 days; what a long period shows depends on
+  how long Cockpit keeps the data. Cockpit gives no metric types, so names decide, with
   Scaleway's exceptions in `Logic.swift`: `instances_total` is no counter, the
   serverless CPU "ratio" is a percentage, `_info`/`_status` are not charted.
   The instance guide's Alloy config pushes basic node metrics with the same
@@ -139,7 +141,10 @@ same split as iOS:
   list. The demo resources are read from Scaleway-like JSON through the same
   parser.
 - Stop uses `poweroff`, which releases the hypervisor and stops compute
-  billing. `stop_in_place` is deliberately not offered.
+  billing. `stop_in_place` is deliberately not offered. An optional setting
+  (`authBeforeActions`, off by default) asks the phone's owner to confirm a
+  stop or reboot first: Face ID or the passcode on iOS, a fingerprint, face
+  or the screen lock on Android (`model/Confirm.kt`).
 - Pro: `ProStore.isPro(keys:)` is the one gate. It is true with an active
   subscription (StoreKit `Transaction.currentEntitlements`, no server) and
   while the demo is the only key, so App Review and screenshots see

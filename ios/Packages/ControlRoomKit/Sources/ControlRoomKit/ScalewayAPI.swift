@@ -276,7 +276,7 @@ public struct ScalewayAPI: ScalewayClient {
         let now = Int(Date().timeIntervalSince1970)
         for base in try await dataSources(target, type: "metrics") {
             let response: PrometheusMatrix = try await send(url("prometheus/api/v1/query_range", [
-                "query": metricQuery(name, selector: target.selector),
+                "query": metricQuery(name, selector: target.selector, step: metricStep(minutes: minutes)),
                 "start": String(now - minutes * 60), "end": String(now),
                 "step": String(metricStep(minutes: minutes)),
             ], base: base))

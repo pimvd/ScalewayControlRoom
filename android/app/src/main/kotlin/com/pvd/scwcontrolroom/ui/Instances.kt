@@ -47,6 +47,11 @@ import com.pvd.scwcontrolroom.kit.StateFilter
 import com.pvd.scwcontrolroom.kit.filterServers
 import com.pvd.scwcontrolroom.kit.formatMoney
 import com.pvd.scwcontrolroom.kit.shouldAskForReview
+import com.pvd.scwcontrolroom.model.AUTH_BEFORE_ACTIONS
+import com.pvd.scwcontrolroom.model.Confirmation
+import com.pvd.scwcontrolroom.model.appPrefs
+import com.pvd.scwcontrolroom.model.confirmOwner
+import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.launch
 
 @Composable
@@ -200,7 +205,21 @@ fun InstanceDetailScreen(id: String) {
                      else "It will be unreachable for a moment.")
             },
             confirmButton = {
-                TextButton(onClick = { confirming = null; run(action) }) {
+                TextButton(onClick = {
+                    confirming = null
+                    // With the setting on, the phone's owner confirms first.
+                    if (!appPrefs(context).getBoolean(AUTH_BEFORE_ACTIONS, false)) {
+                        run(action)
+                    } else scope.launch {
+                        val owner = activity as? FragmentActivity
+                        val title = if (stop) "Stop ${server.name}" else "Reboot ${server.name}"
+                        when (val result = owner?.let { confirmOwner(it, title) } ?: Confirmation.Confirmed) {
+                            Confirmation.Confirmed -> run(action)
+                            Confirmation.Cancelled -> {}
+                            is Confirmation.Failed -> failure = result.message
+                        }
+                    }
+                }) {
                     Text(if (stop) "Stop" else "Reboot", color = MaterialTheme.colorScheme.error)
                 }
             },
@@ -240,7 +259,7 @@ private fun ActionButton(
 
 /** Counts a successful start or stop; true when it is time to ask for a rating. */
 private fun countSuccess(context: Context): Boolean {
-    val prefs = context.getSharedPreferences("app", Context.MODE_PRIVATE)
+    val prefs = appPrefs(context)
     val count = prefs.getInt("successfulActions", 0) + 1
     prefs.edit().putInt("successfulActions", count).apply()
     return shouldAskForReview(count)

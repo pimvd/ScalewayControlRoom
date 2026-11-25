@@ -51,7 +51,12 @@ import com.pvd.scwcontrolroom.kit.ProProducts
 import com.pvd.scwcontrolroom.kit.ScalewayApi
 import com.pvd.scwcontrolroom.kit.Zone
 import com.pvd.scwcontrolroom.kit.validateKey
+import com.pvd.scwcontrolroom.model.AUTH_BEFORE_ACTIONS
 import com.pvd.scwcontrolroom.model.FreeProStore
+import com.pvd.scwcontrolroom.model.appPrefs
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Switch
+import androidx.compose.ui.semantics.Role
 import com.pvd.scwcontrolroom.model.Links
 import com.pvd.scwcontrolroom.model.ProPlan
 import kotlinx.coroutines.launch
@@ -75,6 +80,20 @@ fun SettingsScreen() {
             LinkRow("Add API key") { showAddKey = true }
             if (model.keys.none { it.isDemo }) LinkRow("Try the demo") { scope.launch { model.add(ApiKey.demo) } }
             Footnote("Keys are stored encrypted on this phone and sent only to Scaleway. Tap a key to remove it.")
+
+            SectionHeader("Security")
+            var authBeforeActions by remember { mutableStateOf(appPrefs(context).getBoolean(AUTH_BEFORE_ACTIONS, false)) }
+            Row(
+                Modifier.fillMaxWidth().toggleable(authBeforeActions, role = Role.Switch) {
+                    authBeforeActions = it
+                    appPrefs(context).edit().putBoolean(AUTH_BEFORE_ACTIONS, it).apply()
+                }.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Confirm stop and reboot with your fingerprint, face or screen lock",
+                     style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f).padding(end = 16.dp))
+                Switch(authBeforeActions, null)
+            }
 
             SectionHeader("Pro")
             if (pro == FreeProStore) {
@@ -201,7 +220,7 @@ fun AddKeySheet(onDismiss: () -> Unit) {
 private val features = listOf(
     "Serverless" to "Your containers, functions and jobs in every region.",
     "Everything else" to "Databases, volumes, IPs, domains and more, grouped and searchable.",
-    "Logs and metrics" to "From Cockpit, for serverless apps and instances: the last 15 minutes, hour or day.",
+    "Logs and metrics" to "From Cockpit, for serverless apps and instances: from the last 15 minutes up to 30 days.",
     "Cost details" to "Costs by category and by project, and the months before.",
     "More keys" to "Every organization and project you work on, side by side.",
 )

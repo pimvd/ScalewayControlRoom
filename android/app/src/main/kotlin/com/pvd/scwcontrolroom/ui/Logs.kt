@@ -24,6 +24,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 private val timeFormat = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault())
+/** Beyond a day, the time alone does not say which day. */
+private val dayTimeFormat = DateTimeFormatter.ofPattern("d MMM HH:mm:ss", java.util.Locale.UK).withZone(ZoneId.systemDefault())
 
 @Composable
 fun LogsScreen(kind: LogKind, id: String) {
@@ -60,7 +62,7 @@ fun LogsScreen(kind: LogKind, id: String) {
                 if (loading && result == null) item { Loading() }
                 itemsIndexed(result?.lines.orEmpty()) { _, line ->
                     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
-                        Text(timeFormat.format(line.time), style = MaterialTheme.typography.labelSmall,
+                        Text((if (minutes > 1440) dayTimeFormat else timeFormat).format(line.time), style = MaterialTheme.typography.labelSmall,
                              color = MaterialTheme.colorScheme.onSurfaceVariant)
                         SelectionContainer {
                             Text(line.line, fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 17.sp)

@@ -81,6 +81,7 @@ dependencies {
     implementation(libs.coroutines.android)
     implementation(libs.billing)
     implementation(libs.review)
+    implementation(libs.biometric)
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
 

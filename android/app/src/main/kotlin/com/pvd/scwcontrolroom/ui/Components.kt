@@ -228,10 +228,13 @@ fun <T> Segmented(options: List<T>, selected: T, label: (T) -> String, onSelect:
     }
 }
 
-/** 15 minutes, an hour or a day: the period of a logs or metrics screen. */
+/**
+ * From 15 minutes to 30 days: the period of a logs or metrics screen. What a
+ * long period shows depends on how long Cockpit keeps the data.
+ */
 @Composable
 fun PeriodPicker(minutes: Int, onSelect: (Int) -> Unit) {
-    val ranges = listOf(15 to "15 min", 60 to "1 hour", 1440 to "24 hours")
+    val ranges = listOf(15 to "15m", 60 to "1h", 1440 to "24h", 10080 to "7d", 43200 to "30d")
     Segmented(ranges.map { it.first }, minutes, { m -> ranges.first { it.first == m }.second }, onSelect)
 }
 

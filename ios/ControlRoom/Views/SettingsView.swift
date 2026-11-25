@@ -9,6 +9,7 @@ struct SettingsView: View {
     @State private var showPro = false
     @State private var showManage = false
     @State private var removing: APIKey?
+    @AppStorage("authBeforeActions") private var authBeforeActions = false
 
     var body: some View {
         List {
@@ -27,6 +28,12 @@ struct SettingsView: View {
                 Text("API keys")
             } footer: {
                 Text("Keys are stored in the iPhone keychain and sent only to Scaleway. Tap a key to remove it.")
+            }
+
+            Section {
+                Toggle("Confirm stop and reboot with Face ID or passcode", isOn: $authBeforeActions)
+            } header: {
+                Text("Security")
             }
 
             Section {

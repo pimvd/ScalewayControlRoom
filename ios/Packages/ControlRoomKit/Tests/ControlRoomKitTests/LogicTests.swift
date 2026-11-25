@@ -129,6 +129,9 @@ final class LogicTests: XCTestCase {
         XCTAssertTrue(isCounter("serverless_container_receive_bytes_total"))
         XCTAssertEqual(metricStep(minutes: 15), 15)
         XCTAssertEqual(metricStep(minutes: 1440), 864)
+        // Over 30 days the points are hours apart: the rate covers each gap.
+        XCTAssertEqual(metricQuery("http_requests_total", selector: #"{resource_id="r"}"#, step: metricStep(minutes: 43200)),
+                       #"sum by (resource_instance) (rate(http_requests_total{resource_id="r"}[25920s]))"#)
     }
 
     func testServerlessKindsHaveTabLabels() {

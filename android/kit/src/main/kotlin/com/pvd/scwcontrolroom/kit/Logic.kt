@@ -152,12 +152,14 @@ fun isCounter(name: String): Boolean =
  * PromQL for one metric of one resource, one series per instance: the rate
  * per second for a counter, the average for anything else. The instance
  * count is one series, 0 where there are no samples (scaled to zero) so the
- * chart does not bridge those gaps.
+ * chart does not bridge those gaps. A counter's rate spans at least one
+ * [step] (seconds between points), so a long period skips no samples.
  */
-fun metricQuery(name: String, selector: String): String {
+fun metricQuery(name: String, selector: String, step: Int = 15): String {
     val s = name + selector
     if (isInstanceCount(name)) return "sum($s) or vector(0)"
-    return if (isCounter(name)) "sum by (resource_instance) (rate($s[5m]))" else "avg by (resource_instance) ($s)"
+    val window = if (step > 300) "${step}s" else "5m"
+    return if (isCounter(name)) "sum by (resource_instance) (rate($s[$window]))" else "avg by (resource_instance) ($s)"
 }
 
 /**

@@ -155,11 +155,13 @@ public func isCounter(_ name: String) -> Bool {
 /// PromQL for one metric of one resource, one series per instance: the rate
 /// per second for a counter, the average for anything else. The instance
 /// count is one series, 0 where there are no samples (scaled to zero) so the
-/// chart does not bridge those gaps.
-public func metricQuery(_ name: String, selector: String) -> String {
+/// chart does not bridge those gaps. A counter's rate spans at least one
+/// `step` (seconds between points), so a long period skips no samples.
+public func metricQuery(_ name: String, selector: String, step: Int = 15) -> String {
     let selector = name + selector
     if isInstanceCount(name) { return "sum(\(selector)) or vector(0)" }
-    return isCounter(name) ? "sum by (resource_instance) (rate(\(selector)[5m]))" : "avg by (resource_instance) (\(selector))"
+    let window = step > 300 ? "\(step)s" : "5m"
+    return isCounter(name) ? "sum by (resource_instance) (rate(\(selector)[\(window)]))" : "avg by (resource_instance) (\(selector))"
 }
 
 /// Metrics worth a chart: `_info` metrics, and Scaleway's serverless

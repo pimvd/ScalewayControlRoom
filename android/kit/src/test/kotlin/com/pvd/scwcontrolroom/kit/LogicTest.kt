@@ -148,6 +148,9 @@ class LogicTest {
         assertTrue(isCounter("serverless_container_receive_bytes_total"))
         assertEquals(15, metricStep(15))
         assertEquals(864, metricStep(1440))
+        // Over 30 days the points are hours apart: the rate covers each gap.
+        assertEquals("""sum by (resource_instance) (rate(http_requests_total{resource_id="r"}[25920s]))""",
+                     metricQuery("http_requests_total", selector, metricStep(43200)))
     }
 
     @Test fun serverlessKindsHaveTabLabels() {

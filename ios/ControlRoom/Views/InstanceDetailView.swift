@@ -1,4 +1,5 @@
 import ControlRoomKit
+import LocalAuthentication
 import StoreKit
 import SwiftUI
 
@@ -9,6 +10,7 @@ struct InstanceDetailView: View {
     @State private var pending: ServerAction?
     @State private var confirming: ServerAction?
     @State private var failure: String?
+    @AppStorage("authBeforeActions") private var authBeforeActions = false
 
     var body: some View {
         if let listed = model.servers.first(where: { $0.id == id }) {
@@ -61,7 +63,9 @@ struct InstanceDetailView: View {
         .confirmationDialog(confirming == .poweroff ? "Stop this instance?" : "Reboot this instance?",
                             isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
                             titleVisibility: .visible, presenting: confirming) { action in
-            Button(action == .poweroff ? "Stop" : "Reboot", role: .destructive) { run(action, listed) }
+            Button(action == .poweroff ? "Stop" : "Reboot", role: .destructive) {
+                Task { if await ownerConfirms(action, listed) { run(action, listed) } }
+            }
         } message: { action in
             Text(action == .poweroff
                  ? "Compute billing stops. Volumes and flexible IPs stay, and are still billed."
@@ -97,6 +101,21 @@ struct InstanceDetailView: View {
             } catch {
                 failure = error.localizedDescription
             }
+        }
+    }
+
+    /// With the setting on, the iPhone's owner confirms a stop or reboot with
+    /// Face ID, Touch ID or the passcode first.
+    private func ownerConfirms(_ action: ServerAction, _ listed: Listed<Server>) async -> Bool {
+        guard authBeforeActions else { return true }
+        let reason = "\(action == .poweroff ? "Stop" : "Reboot") \(listed.item.name)"
+        do {
+            return try await LAContext().evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)
+        } catch let error as LAError where [LAError.Code.userCancel, .appCancel, .systemCancel].contains(error.code) {
+            return false
+        } catch {
+            failure = error.localizedDescription
+            return false
         }
     }
 

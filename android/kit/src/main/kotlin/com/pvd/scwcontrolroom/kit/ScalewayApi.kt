@@ -331,7 +331,7 @@ class ScalewayApi(
         val now = System.currentTimeMillis() / 1000
         for (base in dataSources(target, "metrics")) {
             val response = send(url("prometheus/api/v1/query_range", mapOf(
-                "query" to metricQuery(name, target.selector),
+                "query" to metricQuery(name, target.selector, metricStep(minutes)),
                 "start" to "${now - minutes * 60}", "end" to "$now",
                 "step" to metricStep(minutes).toString(),
             ), base))

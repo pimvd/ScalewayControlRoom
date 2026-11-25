@@ -37,7 +37,10 @@ struct LogsView: View {
 
             ForEach(Array((result?.lines ?? []).enumerated()), id: \.offset) { _, line in
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(line.time, format: .dateTime.hour().minute().second()).font(.caption).foregroundStyle(.secondary)
+                    // Beyond a day, the time alone does not say which day.
+                    Text(line.time, format: minutes > 1440 ? .dateTime.day().month().hour().minute().second()
+                                                           : .dateTime.hour().minute().second())
+                        .font(.caption).foregroundStyle(.secondary)
                     Text(line.line).font(.system(size: 13, design: .monospaced)).textSelection(.enabled)
                 }
             }

@@ -36,6 +36,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 private val axisTime = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
+private val axisDay = DateTimeFormatter.ofPattern("d MMM", java.util.Locale.UK).withZone(ZoneId.systemDefault())
 
 /**
  * A line per instance; a single line also gets a shaded area. Values on the
@@ -75,8 +76,10 @@ fun MetricChart(series: List<MetricSeries>, name: String, modifier: Modifier = M
                 val text = measurer.measure(formatMetric(tick, name), labelStyle)
                 drawText(text, topLeft = Offset(width + 6.dp.toPx(), (y(tick) - text.size.height / 2f).coerceIn(0f, height - text.size.height)))
             }
-            drawText(measurer.measure(axisTime.format(start), labelStyle), topLeft = Offset(0f, height + 4.dp.toPx()))
-            val endLabel = measurer.measure(axisTime.format(end), labelStyle)
+            // Over more than a day the dates say more than the times.
+            val axis = if (span > 86_400_000) axisDay else axisTime
+            drawText(measurer.measure(axis.format(start), labelStyle), topLeft = Offset(0f, height + 4.dp.toPx()))
+            val endLabel = measurer.measure(axis.format(end), labelStyle)
             drawText(endLabel, topLeft = Offset(width - endLabel.size.width, height + 4.dp.toPx()))
 
             series.forEachIndexed { index, line ->

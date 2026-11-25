@@ -64,10 +64,12 @@ struct CommandBlock: View {
     }
 }
 
-/// 15 minutes, an hour or a day: the period of a logs or metrics screen.
+/// From 15 minutes to 30 days: the period of a logs or metrics screen. What a
+/// long period shows depends on how long Cockpit keeps the data.
 struct PeriodPicker: View {
     @Binding var minutes: Int
-    private static let ranges = [(label: "15 min", minutes: 15), (label: "1 hour", minutes: 60), (label: "24 hours", minutes: 1440)]
+    private static let ranges = [(label: "15m", minutes: 15), (label: "1h", minutes: 60), (label: "24h", minutes: 1440),
+                                 (label: "7d", minutes: 10080), (label: "30d", minutes: 43200)]
 
     var body: some View {
         Picker("Period", selection: $minutes) {
