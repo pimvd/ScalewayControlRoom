@@ -1,4 +1,5 @@
 import ControlRoomKit
+import QuickLook
 import SwiftUI
 
 struct CostsView: View {
@@ -8,11 +9,17 @@ struct CostsView: View {
     @State private var results: [CostResult] = []
     @State private var loading = false
     @State private var showPro = false
+    @State private var openingInvoice: String?
+    @State private var invoicePreview: URL?
+    @State private var invoiceProblem: String?
 
     struct CostResult: Identifiable {
         var key: APIKey
         var costs: MonthlyCosts?
         var error: String?
+        /// Loaded with Pro only.
+        var invoices: [Invoice] = []
+        var invoicesError: String?
         var id: String { key.organizationID }
     }
 
@@ -23,6 +30,7 @@ struct CostsView: View {
             if model.keys.isEmpty {
                 Text("Add an API key to see your costs.").foregroundStyle(.secondary)
             }
+            if let invoiceProblem { ProblemBanner(text: invoiceProblem) }
             if isPro {
                 Picker("Month", selection: $period) {
                     ForEach(recentPeriods(now: Date(), count: 6), id: \.self) { Text(formatPeriod($0)).tag($0) }
@@ -43,12 +51,13 @@ struct CostsView: View {
                 if let costs = result.costs, isPro {
                     breakdown(costs, title: results.count > 1 ? result.key.label : nil)
                 }
+                if isPro { invoices(result, title: results.count > 1 ? result.key.label : nil) }
             }
             if !loaded.isEmpty && !isPro {
                 Section {
                     Button("See the details with Pro") { showPro = true }
                 } footer: {
-                    Text("Costs by category and by project, and the months before, are part of Pro.")
+                    Text("Costs by category and by project, the months before, and your invoices are part of Pro.")
                 }
             }
             if !loaded.isEmpty {
@@ -60,6 +69,62 @@ struct CostsView: View {
         .refreshable { await load() }
         .task(id: "\(period)-\(model.keys.map(\.id))") { await load() }
         .sheet(isPresented: $showPro) { ProView() }
+        .quickLookPreview($invoicePreview)
+    }
+
+    /// The organization's latest invoices; tapping one opens its PDF.
+    @ViewBuilder
+    private func invoices(_ result: CostResult, title: String?) -> some View {
+        if !result.invoices.isEmpty || result.invoicesError != nil {
+            Section(title.map { "\($0) · Invoices" } ?? "Invoices") {
+                if let error = result.invoicesError { ProblemBanner(text: error) }
+                ForEach(result.invoices) { invoice in
+                    Button { open(invoice, from: result.key) } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(formatPeriod(invoice.period)).font(.headline)
+                                Text(details(invoice)).font(.footnote).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if openingInvoice == invoice.id {
+                                ProgressView()
+                            } else {
+                                Text(formatMoney(invoice.total, currency: invoice.currency)).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .foregroundStyle(.primary)
+                    .disabled(openingInvoice != nil)
+                }
+            }
+        }
+    }
+
+    private func details(_ invoice: Invoice) -> String {
+        var parts: [String] = []
+        if !invoice.number.isEmpty { parts.append("No. \(invoice.number)") }
+        if !invoice.state.isEmpty { parts.append(invoice.state) }
+        if let issued = invoice.issued { parts.append("issued \(issued.formatted(date: .abbreviated, time: .omitted))") }
+        return parts.joined(separator: " · ")
+    }
+
+    /// Downloads the PDF into the temporary folder and shows it, with its
+    /// share button to save or send it.
+    private func open(_ invoice: Invoice, from key: APIKey) {
+        openingInvoice = invoice.id
+        invoiceProblem = nil
+        Task {
+            defer { openingInvoice = nil }
+            do {
+                let file = try await client(for: key).invoicePDF(id: invoice.id)
+                let url = FileManager.default.temporaryDirectory
+                    .appendingPathComponent(file.name.replacingOccurrences(of: "/", with: "-"))
+                try file.data.write(to: url)
+                invoicePreview = url
+            } catch {
+                invoiceProblem = "Could not open the invoice: \(error.localizedDescription)"
+            }
+        }
     }
 
     private func breakdown(_ costs: MonthlyCosts, title: String?) -> some View {
@@ -82,11 +147,23 @@ struct CostsView: View {
         loading = true
         defer { loading = false }
         let period = self.period
+        let withInvoices = isPro
         results = await withTaskGroup(of: CostResult.self) { group in
             for key in uniqueOrganizations(model.keys) {
                 group.addTask {
-                    do { return CostResult(key: key, costs: try await client(for: key).costs(period: period)) }
-                    catch { return CostResult(key: key, error: error.localizedDescription) }
+                    let api = client(for: key)
+                    var result: CostResult
+                    do { result = CostResult(key: key, costs: try await api.costs(period: period)) }
+                    catch { result = CostResult(key: key, error: error.localizedDescription) }
+                    if withInvoices {
+                        do { result.invoices = try await api.invoices() }
+                        catch let error as APIError where error.isForbidden {
+                            result.invoicesError = "This key may not read invoices. Add BillingReadOnly to its policy."
+                        } catch {
+                            result.invoicesError = error.localizedDescription
+                        }
+                    }
+                    return result
                 }
             }
             var all: [CostResult] = []

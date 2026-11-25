@@ -74,6 +74,7 @@ class ScalewayApi(
         const val BASE = "https://api.scaleway.com"
         const val PAGE_SIZE = 100
         const val LOG_LIMIT = 200
+        const val INVOICE_COUNT = 12
 
         /** Loki's streams merged into one list, newest first. */
         fun logLines(responses: List<JsonElement>, limit: Int = LOG_LIMIT): List<LogLine> =
@@ -183,6 +184,32 @@ class ScalewayApi(
 
     /** google.type.Money: whole units (a number or a string) plus nanos. */
     private fun money(value: JsonObject?): Double = (value?.num("units") ?: 0.0) + (value?.num("nanos") ?: 0.0) / 1e9
+
+    override suspend fun invoices(): List<Invoice> =
+        send(url("billing/v2beta1/invoices", mapOf(
+            "organization_id" to key.organizationID, "order_by" to "issued_date_desc",
+            "page_size" to INVOICE_COUNT.toString(), "page" to "1",
+        ))).obj?.objects("invoices").orEmpty().map { i ->
+            val total = i["total_taxed"].obj
+            Invoice(
+                id = i.str("id").orEmpty(),
+                number = i.int("number")?.toString().orEmpty(),
+                period = (i.str("billing_period") ?: i.str("start_date")).orEmpty().take(7),
+                issued = i.str("issued_date")?.let(::parseScalewayDate),
+                total = money(total),
+                currency = total?.str("currency_code") ?: "EUR",
+                state = i.str("state").orEmpty(),
+            )
+        }
+
+    /** Scaleway sends the file as JSON, its content base64 encoded. */
+    override suspend fun invoicePdf(id: String): InvoiceFile {
+        val file = send(url("billing/v2beta1/invoices/$id/download", mapOf("file_type" to "pdf"))).obj
+        val bytes = runCatching { java.util.Base64.getDecoder().decode(file?.str("content").orEmpty()) }.getOrNull()
+            ?: throw ApiException(0, "Scaleway sent an invoice that could not be read.")
+        val name = file?.str("name") ?: "invoice-$id.pdf"
+        return InvoiceFile(if (name.endsWith(".pdf")) name else "$name.pdf", bytes)
+    }
 
     override suspend fun hourlyPrices(zone: Zone): Map<String, Double> {
         // The Instance API's own catalogue (`products/servers`) reports 0 for

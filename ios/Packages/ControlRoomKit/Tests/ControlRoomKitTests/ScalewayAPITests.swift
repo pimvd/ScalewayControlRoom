@@ -105,6 +105,32 @@ final class ScalewayAPITests: XCTestCase {
         XCTAssertEqual(query["billing_period"], "2026-11")
     }
 
+    func testInvoicesAreTheNewestOfTheKeysOrganization() async throws {
+        let transport = FakeTransport()
+        transport.responses["/billing/v2beta1/invoices"] = (200, """
+            {"invoices": [{"id": "i1", "number": 1234, "billing_period": "2026-10-01T00:00:00Z",
+              "issued_date": "2026-11-01T09:00:00.123456Z", "state": "paid",
+              "total_taxed": {"currency_code": "EUR", "units": "145", "nanos": 500000000}}], "total_count": 1}
+            """)
+        let invoices = try await ScalewayAPI(key: key, transport: transport).invoices()
+        XCTAssertEqual(invoices, [Invoice(id: "i1", number: "1234", period: "2026-10", issued: parseScalewayDate("2026-11-01T09:00:00Z"),
+                                          total: 145.5, currency: "EUR", state: "paid")])
+        let query = transport.queries(for: "/billing/v2beta1/invoices").first!
+        XCTAssertEqual(query["organization_id"], "org-1")
+        XCTAssertEqual(query["order_by"], "issued_date_desc")
+    }
+
+    func testAnInvoiceDownloadsAsAPDF() async throws {
+        let transport = FakeTransport()
+        let pdf = Data("%PDF-1.4 test".utf8)
+        transport.responses["/billing/v2beta1/invoices/i1/download"] = (200,
+            #"{"name": "invoice-1234", "content_type": "application/pdf", "content": "\#(pdf.base64EncodedString())"}"#)
+        let file = try await ScalewayAPI(key: key, transport: transport).invoicePDF(id: "i1")
+        XCTAssertEqual(file.name, "invoice-1234.pdf")
+        XCTAssertEqual(file.data, pdf)
+        XCTAssertEqual(transport.queries(for: "/billing/v2beta1/invoices/i1/download").first?["file_type"], "pdf")
+    }
+
     func testPricesComeFromTheProductCatalog() async throws {
         let transport = FakeTransport()
         transport.responses["/product-catalog/v2alpha1/public-catalog/products"] = (200, """

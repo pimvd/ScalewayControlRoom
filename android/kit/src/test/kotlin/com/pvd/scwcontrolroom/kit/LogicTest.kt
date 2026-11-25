@@ -206,6 +206,18 @@ class DemoTest {
         assertTrue(demo.logs(CockpitTarget("webshop", Region.FR_PAR, "demo-3"), 60).lines.isEmpty())
     }
 
+    @Test fun demoInvoicesComeWithAReadablePdf() = runTest {
+        val demo = DemoClient(latency = 0)
+        val invoices = demo.invoices()
+        assertEquals(3, invoices.size)
+        assertTrue(invoices.all { it.total > 0 })
+        val text = String(demo.invoicePdf(invoices[0].id).bytes, Charsets.US_ASCII)
+        assertTrue(text.startsWith("%PDF-1.4"))
+        // The cross-reference table points where it says.
+        val xref = text.substringAfter("startxref\n").substringBefore("\n").toInt()
+        assertEquals("xref", text.substring(xref, xref + 4))
+    }
+
     @Test fun aQuietInstanceIsExplainedByItsState() {
         val now = Instant.ofEpochSecond(1_000_000)
         var s = Server("1", "web", ServerState.STOPPED, "DEV1-S", Zone.FR_PAR_1, "p")

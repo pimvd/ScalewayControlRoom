@@ -221,7 +221,7 @@ private val features = listOf(
     "Serverless" to "Your containers, functions and jobs in every region.",
     "Everything else" to "Databases, volumes, IPs, domains and more, grouped and searchable.",
     "Logs and metrics" to "From Cockpit, for serverless apps and instances: from the last 15 minutes up to 30 days.",
-    "Cost details" to "Costs by category and by project, and the months before.",
+    "Cost details" to "Costs by category and by project, the months before, and your invoices.",
     "More keys" to "Every organization and project you work on, side by side.",
 )
 

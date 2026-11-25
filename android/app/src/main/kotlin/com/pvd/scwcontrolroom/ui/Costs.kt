@@ -36,8 +36,35 @@ import java.time.Instant
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
+import com.pvd.scwcontrolroom.kit.ApiException
+import com.pvd.scwcontrolroom.kit.Invoice
+import java.io.File
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
-private data class CostResult(val key: ApiKey, val costs: MonthlyCosts?, val error: String?)
+private data class CostResult(
+    val key: ApiKey,
+    val costs: MonthlyCosts?,
+    val error: String?,
+    /** Loaded with Pro only. */
+    val invoices: List<Invoice> = emptyList(),
+    val invoicesError: String? = null,
+)
+
+private val issuedFormat = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.UK).withZone(ZoneId.systemDefault())
 
 @Composable
 fun CostsScreen() {
@@ -47,18 +74,53 @@ fun CostsScreen() {
     var results by remember { mutableStateOf(emptyList<CostResult>()) }
     var picking by remember { mutableStateOf(false) }
     var showPro by remember { mutableStateOf(false) }
+    var openingInvoice by remember { mutableStateOf<String?>(null) }
+    var invoiceProblem by remember { mutableStateOf<String?>(null) }
     val isPro = pro.isPro(model.keys)
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     /** Billing is per organization: one request per organization, not per key. */
     suspend fun load() {
         results = coroutineScope {
             uniqueOrganizations(model.keys).map { key ->
                 async {
-                    val result = attempt { clientFor(key).costs(period) }
-                    CostResult(key, result.getOrNull(), result.exceptionOrNull()?.let { it.message ?: it.toString() })
+                    val api = clientFor(key)
+                    val costs = attempt { api.costs(period) }
+                    val invoices = if (isPro) attempt { api.invoices() } else Result.success(emptyList())
+                    CostResult(
+                        key, costs.getOrNull(), costs.exceptionOrNull()?.let { it.message ?: it.toString() },
+                        invoices.getOrNull().orEmpty(),
+                        invoices.exceptionOrNull()?.let {
+                            if ((it as? ApiException)?.isForbidden == true) "This key may not read invoices. Add BillingReadOnly to its policy."
+                            else it.message ?: it.toString()
+                        },
+                    )
                 }
             }.awaitAll()
         }.sortedBy { it.key.label }
+    }
+
+    /** Downloads the PDF into the app's cache and opens it in a PDF app. */
+    fun open(invoice: Invoice, key: ApiKey) {
+        openingInvoice = invoice.id
+        invoiceProblem = null
+        scope.launch {
+            try {
+                val file = clientFor(key).invoicePdf(invoice.id)
+                val folder = File(context.cacheDir, "invoices").apply { mkdirs() }
+                val pdf = File(folder, file.name.replace("/", "-")).apply { writeBytes(file.bytes) }
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", pdf)
+                context.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/pdf")
+                                          .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+            } catch (error: ActivityNotFoundException) {
+                invoiceProblem = "No app on this phone opens PDF files."
+            } catch (error: Exception) {
+                invoiceProblem = "Could not open the invoice: ${error.message}"
+            } finally {
+                openingInvoice = null
+            }
+        }
     }
 
     LaunchedEffect(period, model.keys.map { it.id }) { load() }
@@ -66,6 +128,7 @@ fun CostsScreen() {
     Screen("Costs") {
         RefreshList(onRefresh = { load() }) {
             if (model.keys.isEmpty()) item { Footnote("Add an API key to see your costs.") }
+            invoiceProblem?.let { item { ProblemBanner(it) } }
             if (isPro) {
                 item {
                     TextButton(onClick = { picking = true }, Modifier.padding(horizontal = 8.dp)) {
@@ -92,11 +155,22 @@ fun CostsScreen() {
             for (result in results) {
                 result.error?.let { item { ProblemBanner("${result.key.label}: $it") } }
                 if (result.costs != null && isPro) breakdown(result.costs, if (results.size > 1) result.key.label else null)
+                if (isPro && (result.invoices.isNotEmpty() || result.invoicesError != null)) {
+                    item { SectionHeader(if (results.size > 1) "${result.key.label} · Invoices" else "Invoices") }
+                    result.invoicesError?.let { item { ProblemBanner(it) } }
+                    result.invoices.forEach { invoice ->
+                        item(key = "invoice-${invoice.id}") {
+                            InvoiceRow(invoice, opening = openingInvoice == invoice.id, enabled = openingInvoice == null) {
+                                open(invoice, result.key)
+                            }
+                        }
+                    }
+                }
             }
             if (loaded.isNotEmpty() && !isPro) {
                 item {
                     TextButton(onClick = { showPro = true }, Modifier.padding(horizontal = 8.dp)) { Text("See the details with Pro") }
-                    Footnote("Costs by category and by project, and the months before, are part of Pro.")
+                    Footnote("Costs by category and by project, the months before, and your invoices are part of Pro.")
                 }
             }
             if (loaded.isNotEmpty()) {
@@ -105,6 +179,27 @@ fun CostsScreen() {
         }
     }
     if (showPro) ProSheet { showPro = false }
+}
+
+/** An invoice: its month, number, state and date, and its total; tapping opens the PDF. */
+@Composable
+private fun InvoiceRow(invoice: Invoice, opening: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    val details = listOfNotNull(
+        invoice.number.takeIf { it.isNotEmpty() }?.let { "No. $it" },
+        invoice.state.takeIf { it.isNotEmpty() },
+        invoice.issued?.let { "issued ${issuedFormat.format(it)}" },
+    ).joinToString(" · ")
+    Row(
+        Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(formatPeriod(invoice.period), style = MaterialTheme.typography.titleMedium)
+            Text(details, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (opening) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+        else Text(formatMoney(invoice.total, invoice.currency), color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 private fun LazyListScope.breakdown(costs: MonthlyCosts, title: String?) {

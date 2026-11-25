@@ -102,6 +102,10 @@ same split as iOS:
   each key that sees it until one is allowed (401/403 moves on to the next).
 - Costs are fetched once per organization ID, so two keys for one
   organization do not double count.
+- Invoices (Pro): the organization's latest 12 under the costs
+  (`billing/v2beta1/invoices`); tapping one downloads its PDF (JSON with the
+  content base64 encoded) and opens it: QuickLook on iOS, a PDF app through a
+  FileProvider on Android. The demo builds a one-page PDF (`Demo.invoicePDF`).
 - Logs: the app lists the project's Cockpit log data sources in the region and
   queries each one's Loki with `{resource_id="<id>"}`, authenticated with the
   IAM secret key (`X-Auth-Token`). Scaleway labels serverless logs that way;
@@ -150,7 +154,7 @@ same split as iOS:
   while the demo is the only key, so App Review and screenshots see
   everything. Free: one key, instances with start/stop/reboot, this month's
   total. Pro: more keys, serverless, other resources, logs, metrics, cost
-  breakdown and earlier months.
+  breakdown, earlier months and invoices.
   The purchase screen is StoreKit's `SubscriptionStoreView`.
 - Rating: after the 3rd, 20th and 60th successful start/stop with a real key
   (never in the demo), via SwiftUI's `requestReview`.

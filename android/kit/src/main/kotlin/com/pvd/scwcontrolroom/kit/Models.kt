@@ -138,6 +138,22 @@ data class Consumption(val amount: Double, val category: String, val product: St
 
 data class MonthlyCosts(val items: List<Consumption>, val discount: Double, val currency: String)
 
+/** One of the organization's invoices, as the Costs screen lists it. */
+data class Invoice(
+    override val id: String,
+    val number: String,
+    /** YYYY-MM. */
+    val period: String,
+    val issued: Instant?,
+    /** Including VAT. */
+    val total: Double,
+    val currency: String,
+    val state: String,
+) : Identified
+
+/** An invoice's PDF. */
+class InvoiceFile(val name: String, val bytes: ByteArray)
+
 /**
  * A Scaleway API key as the user entered it. Only the secret key is sent to
  * the API, so the access key is not asked for. The demo key is a key like
@@ -172,6 +188,10 @@ interface ScalewayClient {
     suspend fun act(zone: Zone, serverID: String, action: ServerAction)
     /** `period` is YYYY-MM. */
     suspend fun costs(period: String): MonthlyCosts
+    /** The organization's latest invoices, newest first. */
+    suspend fun invoices(): List<Invoice>
+    /** An invoice as a PDF. */
+    suspend fun invoicePdf(id: String): InvoiceFile
     /** Commercial type → price per hour. */
     suspend fun hourlyPrices(zone: Zone): Map<String, Double>
     suspend fun listServerless(region: Region): List<ServerlessApp>

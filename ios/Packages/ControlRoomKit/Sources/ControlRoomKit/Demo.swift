@@ -31,15 +31,23 @@ public struct DemoClient: ScalewayClient {
 
     public func costs(period: String) async throws -> MonthlyCosts {
         try await Task.sleep(for: latency)
-        // Older months a little different, so the history does not look copied.
-        let month = Int(period.suffix(2)) ?? 1
-        let factor = 1 - Double(month % 3) * 0.08
-        return MonthlyCosts(
-            items: Demo.costs.map {
-                Consumption(amount: ($0.amount * factor * 100).rounded() / 100, category: $0.category,
-                            product: $0.product, project: $0.project)
-            },
-            discount: 0, currency: "EUR")
+        return Demo.monthCosts(period: period)
+    }
+
+    /// The three months before this one, billed for their costs plus 21% VAT.
+    public func invoices() async throws -> [Invoice] {
+        try await Task.sleep(for: latency)
+        let periods = recentPeriods(now: Date(), count: 4)
+        return (1..<periods.count).map { i in
+            Invoice(id: "demo-invoice-\(i)", number: String(10483 - i), period: periods[i],
+                    issued: parseScalewayDate("\(periods[i - 1])-01T09:00:00Z"),
+                    total: (total(Demo.monthCosts(period: periods[i])) * 1.21 * 100).rounded() / 100, currency: "EUR", state: "paid")
+        }
+    }
+
+    public func invoicePDF(id: String) async throws -> InvoiceFile {
+        try await Task.sleep(for: latency)
+        return InvoiceFile(name: "controlroom-demo-invoice.pdf", data: Demo.invoicePDF)
     }
 
     public func hourlyPrices(zone: Zone) async throws -> [String: Double] {
@@ -109,6 +117,42 @@ public enum Demo {
         Server(id: "demo-6", name: "old-wordpress", state: .stopped, commercialType: "DEV1-S", zone: .nlAms1,
                project: "tooling"),
     ]
+
+    /// Older months a little different, so the history does not look copied.
+    static func monthCosts(period: String) -> MonthlyCosts {
+        let month = Int(period.suffix(2)) ?? 1
+        let factor = 1 - Double(month % 3) * 0.08
+        return MonthlyCosts(
+            items: costs.map {
+                Consumption(amount: ($0.amount * factor * 100).rounded() / 100, category: $0.category,
+                            product: $0.product, project: $0.project)
+            },
+            discount: 0, currency: "EUR")
+    }
+
+    /// A one-page PDF that says it is made up. Built rather than stored: a
+    /// PDF's cross-reference table holds byte offsets and trailing spaces.
+    static let invoicePDF: Data = {
+        let text = "BT /F1 20 Tf 72 760 Td (ControlRoom demo invoice) Tj 0 -30 Td /F1 12 Tf (Made-up data. This is not a real invoice.) Tj ET"
+        let objects = [
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+            "<< /Length \(text.utf8.count) >>\nstream\n\(text)\nendstream",
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        ]
+        var pdf = "%PDF-1.4\n"
+        var offsets: [Int] = []
+        for (index, object) in objects.enumerated() {
+            offsets.append(pdf.utf8.count)
+            pdf += "\(index + 1) 0 obj\n\(object)\nendobj\n"
+        }
+        let xref = pdf.utf8.count
+        pdf += "xref\n0 \(objects.count + 1)\n0000000000 65535 f \n"
+        pdf += offsets.map { String(format: "%010d 00000 n \n", $0) }.joined()
+        pdf += "trailer\n<< /Size \(objects.count + 1) /Root 1 0 R >>\nstartxref\n\(xref)\n%%EOF\n"
+        return Data(pdf.utf8)
+    }()
 
     static let prices: [String: Double] = [
         "DEV1-S": 0.0109, "DEV1-M": 0.0219, "GP1-XS": 0.091, "PRO2-S": 0.219, "L4-1-24G": 0.75,

@@ -210,6 +210,40 @@ public struct MonthlyCosts: Sendable {
     }
 }
 
+/// One of the organization's invoices, as the Costs screen lists it.
+public struct Invoice: Identifiable, Hashable, Sendable {
+    public var id: String
+    public var number: String
+    /// YYYY-MM.
+    public var period: String
+    public var issued: Date?
+    /// Including VAT.
+    public var total: Double
+    public var currency: String
+    public var state: String
+
+    public init(id: String, number: String, period: String, issued: Date?, total: Double, currency: String, state: String) {
+        self.id = id
+        self.number = number
+        self.period = period
+        self.issued = issued
+        self.total = total
+        self.currency = currency
+        self.state = state
+    }
+}
+
+/// An invoice's PDF.
+public struct InvoiceFile: Sendable {
+    public var name: String
+    public var data: Data
+
+    public init(name: String, data: Data) {
+        self.name = name
+        self.data = data
+    }
+}
+
 /// A Scaleway API key as the user entered it. Only the secret key is sent to
 /// the API, so the access key is not asked for. The demo key is a key like
 /// any other, served by a fake client instead of the API.
@@ -255,6 +289,10 @@ public protocol ScalewayClient: Sendable {
     func act(zone: Zone, serverID: String, action: ServerAction) async throws
     /// `period` is YYYY-MM.
     func costs(period: String) async throws -> MonthlyCosts
+    /// The organization's latest invoices, newest first.
+    func invoices() async throws -> [Invoice]
+    /// An invoice as a PDF.
+    func invoicePDF(id: String) async throws -> InvoiceFile
     /// Commercial type → price per hour.
     func hourlyPrices(zone: Zone) async throws -> [String: Double]
     func listServerless(region: Region) async throws -> [ServerlessApp]

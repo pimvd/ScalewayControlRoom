@@ -24,6 +24,7 @@ public struct ScalewayAPI: ScalewayClient {
     static let base = URL(string: "https://api.scaleway.com")!
     static let pageSize = 100
     static let logLimit = 200
+    static let invoiceCount = 12
 
     let key: APIKey
     let transport: HTTPTransport
@@ -127,6 +128,24 @@ public struct ScalewayAPI: ScalewayClient {
             },
             discount: discount,
             currency: items.first?.value.currencyCode ?? "EUR")
+    }
+
+    public func invoices() async throws -> [Invoice] {
+        let response: ListResponse<APIInvoice> = try await send(url("billing/v2beta1/invoices", [
+            "organization_id": key.organizationID, "order_by": "issued_date_desc",
+            "page_size": String(Self.invoiceCount), "page": "1",
+        ]))
+        return (response.invoices ?? []).map(\.invoice)
+    }
+
+    /// Scaleway sends the file as JSON, its content base64 encoded.
+    public func invoicePDF(id: String) async throws -> InvoiceFile {
+        let file: APIFile = try await send(url("billing/v2beta1/invoices/\(id)/download", ["file_type": "pdf"]))
+        guard let data = Data(base64Encoded: file.content) else {
+            throw APIError(status: 0, message: "Scaleway sent an invoice that could not be read.")
+        }
+        let name = (file.name ?? "").isEmpty ? "invoice-\(id).pdf" : file.name!
+        return InvoiceFile(name: name.hasSuffix(".pdf") ? name : name + ".pdf", data: data)
     }
 
     public func hourlyPrices(zone: Zone) async throws -> [String: Double] {
@@ -323,6 +342,7 @@ struct ListResponse<T: Decodable>: Decodable {
     var jobRuns: [T]?
     var dataSources: [T]?
     var products: [T]?
+    var invoices: [T]?
     var totalDiscountUntaxedValue: Double?
 }
 
@@ -372,6 +392,27 @@ struct APIConsumption: Decodable {
     var productName: String
     var projectName: String?
     var projectId: String
+}
+
+struct APIInvoice: Decodable {
+    var id: String
+    var number: Int?
+    var billingPeriod: String?
+    var startDate: String?
+    var issuedDate: String?
+    var totalTaxed: Money?
+    var state: String?
+
+    var invoice: Invoice {
+        Invoice(id: id, number: number.map(String.init) ?? "", period: String((billingPeriod ?? startDate ?? "").prefix(7)),
+                issued: issuedDate.flatMap(parseScalewayDate), total: totalTaxed?.amount ?? 0,
+                currency: totalTaxed?.currencyCode ?? "EUR", state: state ?? "")
+    }
+}
+
+struct APIFile: Decodable {
+    var name: String?
+    var content: String
 }
 
 struct CatalogProduct: Decodable {

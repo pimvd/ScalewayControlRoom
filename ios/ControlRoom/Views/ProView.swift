@@ -14,7 +14,7 @@ struct ProView: View {
         ("Serverless", "Your containers, functions and jobs in every region."),
         ("Everything else", "Databases, volumes, IPs, domains and more, grouped and searchable."),
         ("Logs and metrics", "From Cockpit, for serverless apps and instances: from the last 15 minutes up to 30 days."),
-        ("Cost details", "Costs by category and by project, and the months before."),
+        ("Cost details", "Costs by category and by project, the months before, and your invoices."),
         ("More keys", "Every organization and project you work on, side by side."),
     ]
 

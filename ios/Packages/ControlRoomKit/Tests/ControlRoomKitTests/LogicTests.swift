@@ -193,6 +193,19 @@ final class DemoTests: XCTestCase {
         XCTAssertTrue(instance.lines.isEmpty)
     }
 
+    func testDemoInvoicesComeWithAReadablePDF() async throws {
+        let demo = DemoClient(latency: .zero)
+        let invoices = try await demo.invoices()
+        XCTAssertEqual(invoices.count, 3)
+        XCTAssertTrue(invoices.allSatisfy { $0.total > 0 })
+        let file = try await demo.invoicePDF(id: invoices[0].id)
+        let text = String(decoding: file.data, as: UTF8.self)
+        XCTAssertTrue(text.hasPrefix("%PDF-1.4"))
+        // The cross-reference table points where it says.
+        let xref = text.components(separatedBy: "startxref\n")[1].split(separator: "\n")[0]
+        XCTAssertEqual(String(decoding: file.data[Int(xref)!..<Int(xref)! + 4], as: UTF8.self), "xref")
+    }
+
     func testAQuietInstanceIsExplainedByItsState() {
         let now = Date(timeIntervalSince1970: 1_000_000)
         var s = Server(id: "1", name: "web", state: .stopped, commercialType: "DEV1-S", zone: .frPar1, project: "p")

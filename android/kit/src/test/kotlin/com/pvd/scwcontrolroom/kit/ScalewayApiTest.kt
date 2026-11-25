@@ -81,6 +81,32 @@ class ScalewayApiTest {
         assertEquals("2026-11", query["billing_period"])
     }
 
+    @Test fun invoicesAreTheNewestOfTheKeysOrganization() = runTest {
+        val transport = FakeTransport()
+        transport.responses["/billing/v2beta1/invoices"] = 200 to """
+            {"invoices": [{"id": "i1", "number": 1234, "billing_period": "2026-10-01T00:00:00Z",
+              "issued_date": "2026-11-01T09:00:00.123456Z", "state": "paid",
+              "total_taxed": {"currency_code": "EUR", "units": "145", "nanos": 500000000}}], "total_count": 1}
+            """
+        val invoices = ScalewayApi(key, transport).invoices()
+        assertEquals(listOf(Invoice("i1", "1234", "2026-10", Instant.parse("2026-11-01T09:00:00Z"), 145.5, "EUR", "paid")), invoices)
+        val query = transport.queries("/billing/v2beta1/invoices").first()
+        assertEquals("org-1", query["organization_id"])
+        assertEquals("issued_date_desc", query["order_by"])
+    }
+
+    @Test fun anInvoiceDownloadsAsAPdf() = runTest {
+        val transport = FakeTransport()
+        val pdf = "%PDF-1.4 test".toByteArray()
+        val content = java.util.Base64.getEncoder().encodeToString(pdf)
+        transport.responses["/billing/v2beta1/invoices/i1/download"] = 200 to
+            """{"name": "invoice-1234", "content_type": "application/pdf", "content": "$content"}"""
+        val file = ScalewayApi(key, transport).invoicePdf("i1")
+        assertEquals("invoice-1234.pdf", file.name)
+        assertEquals(pdf.toList(), file.bytes.toList())
+        assertEquals("pdf", transport.queries("/billing/v2beta1/invoices/i1/download").first()["file_type"])
+    }
+
     @Test fun pricesComeFromTheProductCatalog() = runTest {
         val transport = FakeTransport()
         transport.responses["/product-catalog/v2alpha1/public-catalog/products"] = 200 to """

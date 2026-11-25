@@ -35,13 +35,22 @@ class DemoClient(private val latency: Long = 300, private val settle: Long = 300
 
     override suspend fun costs(period: String): MonthlyCosts {
         delay(latency)
-        // Older months a little different, so the history does not look copied.
-        val month = period.takeLast(2).toIntOrNull() ?: 1
-        val factor = 1 - (month % 3) * 0.08
-        return MonthlyCosts(
-            items = Demo.costs.map { it.copy(amount = Math.round(it.amount * factor * 100) / 100.0) },
-            discount = 0.0, currency = "EUR",
-        )
+        return Demo.monthCosts(period)
+    }
+
+    /** The three months before this one, billed for their costs plus 21% VAT. */
+    override suspend fun invoices(): List<Invoice> {
+        delay(latency)
+        val periods = recentPeriods(Instant.now(), 4)
+        return (1 until periods.size).map { i ->
+            Invoice("demo-invoice-$i", (10483 - i).toString(), periods[i], parseScalewayDate("${periods[i - 1]}-01T09:00:00Z"),
+                    Math.round(total(Demo.monthCosts(periods[i])) * 1.21 * 100) / 100.0, "EUR", "paid")
+        }
+    }
+
+    override suspend fun invoicePdf(id: String): InvoiceFile {
+        delay(latency)
+        return InvoiceFile("controlroom-demo-invoice.pdf", Demo.invoicePdf)
     }
 
     override suspend fun hourlyPrices(zone: Zone): Map<String, Double> = Demo.prices
@@ -108,6 +117,39 @@ object Demo {
         Server("demo-5", "gpu-training", ServerState.STOPPED, "L4-1-24G", Zone.FR_PAR_2, "ml", listOf("dev")),
         Server("demo-6", "old-wordpress", ServerState.STOPPED, "DEV1-S", Zone.NL_AMS_1, "tooling"),
     )
+
+    /** Older months a little different, so the history does not look copied. */
+    fun monthCosts(period: String): MonthlyCosts {
+        val month = period.takeLast(2).toIntOrNull() ?: 1
+        val factor = 1 - (month % 3) * 0.08
+        return MonthlyCosts(costs.map { it.copy(amount = Math.round(it.amount * factor * 100) / 100.0) }, 0.0, "EUR")
+    }
+
+    /**
+     * A one-page PDF that says it is made up. Built rather than stored: a
+     * PDF's cross-reference table holds byte offsets and trailing spaces.
+     */
+    val invoicePdf: ByteArray by lazy {
+        val text = "BT /F1 20 Tf 72 760 Td (ControlRoom demo invoice) Tj 0 -30 Td /F1 12 Tf (Made-up data. This is not a real invoice.) Tj ET"
+        val objects = listOf(
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+            "<< /Length ${text.length} >>\nstream\n$text\nendstream",
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        )
+        val pdf = StringBuilder("%PDF-1.4\n")
+        val offsets = objects.mapIndexed { index, body ->
+            val offset = pdf.length
+            pdf.append("${index + 1} 0 obj\n$body\nendobj\n")
+            offset
+        }
+        val xref = pdf.length
+        pdf.append("xref\n0 ${objects.size + 1}\n0000000000 65535 f \n")
+        offsets.forEach { pdf.append(String.format(java.util.Locale.ROOT, "%010d 00000 n \n", it)) }
+        pdf.append("trailer\n<< /Size ${objects.size + 1} /Root 1 0 R >>\nstartxref\n$xref\n%%EOF\n")
+        pdf.toString().toByteArray(Charsets.US_ASCII)
+    }
 
     val prices = mapOf("DEV1-S" to 0.0109, "DEV1-M" to 0.0219, "GP1-XS" to 0.091, "PRO2-S" to 0.219, "L4-1-24G" to 0.75)
 
