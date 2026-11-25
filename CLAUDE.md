@@ -162,14 +162,15 @@ same split as iOS:
 ## Android specifics
 
 - Distributed on Google Play: every push to master that changes `android/`
-  uploads the bundle (Play Billing) to the internal track; production is
+  uploads the bundle (Play Billing) with fastlane supply to the internal track; production is
   promoted by hand in the Play Console. The upload signs in to Google Cloud
   without a key (Workload Identity Federation; the organization forbids
   service account keys), with the `PLAY_WORKLOAD_IDENTITY_PROVIDER` and
   `PLAY_SERVICE_ACCOUNT` repository variables. Run by hand, it can also push
-  the store listing, graphics and the Pro subscription from `PlayStore/`
-  (`scripts/sync_play.py`, tests in `scripts/tests/`), as `release.yml` does
-  for the App Store. Also as a signed APK on GitHub
+  the store listing and graphics (fastlane supply, from `PlayStore/` through
+  `scripts/listing_to_fastlane.py`) and the Pro subscription
+  (`scripts/sync_subscriptions.py`, which fastlane cannot do; tests in
+  `scripts/tests/`), as `release.yml` does for the App Store. Also as a signed APK on GitHub
   Releases (`android-v<version>`, manual), where Play Billing cannot work, so
   that build has every feature free; users install it by hand or with
   Obtainium.

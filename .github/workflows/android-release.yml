@@ -190,30 +190,49 @@ jobs:
           workload_identity_provider: ${{ vars.PLAY_WORKLOAD_IDENTITY_PROVIDER || secrets.PLAY_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.PLAY_SERVICE_ACCOUNT || secrets.PLAY_SERVICE_ACCOUNT }}
 
+      # fastlane supply does for Google Play what deliver does for the
+      # iPhone app; it signs in with the credentials the step above wrote
+      # (GOOGLE_APPLICATION_CREDENTIALS). PlayStore/ is converted to its layout.
+      - name: Install fastlane
+        if: env.CHANNEL == 'play' && (env.BUILD == 'true' || inputs.push_listing)
+        run: |
+          sudo gem install fastlane -v 2.241.2 --no-document
+          python3 scripts/listing_to_fastlane.py
+
       - name: Upload to Google Play's internal track
         if: env.CHANNEL == 'play' && env.BUILD == 'true'
-        uses: r0adkll/upload-google-play@v1.1.5
-        with:
-          serviceAccountJson: ${{ steps.google.outputs.credentials_file_path }}
-          packageName: com.pvd.scwcontrolroom
-          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
-          mappingFile: android/app/build/outputs/mapping/release/mapping.txt
-          tracks: internal
-          status: ${{ vars.PLAY_RELEASE_STATUS || secrets.PLAY_RELEASE_STATUS || 'completed' }}
-
-      # The service account needs "Manage store presence" for these.
-      - name: Push the subscription and the store listing
-        if: env.CHANNEL == 'play' && (inputs.push_subscriptions || inputs.push_listing)
         env:
-          PUSH_SUBSCRIPTIONS: ${{ inputs.push_subscriptions }}
-          PUSH_LISTING: ${{ inputs.push_listing }}
+          STATUS: ${{ vars.PLAY_RELEASE_STATUS || secrets.PLAY_RELEASE_STATUS || 'completed' }}
+        run: |
+          fastlane supply \
+            --package_name com.pvd.scwcontrolroom \
+            --track internal \
+            --release_status "$STATUS" \
+            --aab app/build/outputs/bundle/release/app-release.aab \
+            --mapping app/build/outputs/mapping/release/mapping.txt \
+            --metadata_path fastlane/metadata/android \
+            --skip_upload_metadata \
+            --skip_upload_images \
+            --skip_upload_screenshots
+
+      # The service account needs "Manage store presence" for these two.
+      - name: Sync the Pro subscription
+        if: env.CHANNEL == 'play' && inputs.push_subscriptions
         run: |
           python3 -m venv "$RUNNER_TEMP/play-venv"
           "$RUNNER_TEMP/play-venv/bin/pip" install --quiet google-auth requests
-          args=()
-          [ "$PUSH_SUBSCRIPTIONS" = true ] && args+=(--subscriptions)
-          [ "$PUSH_LISTING" = true ] && args+=(--listing)
-          "$RUNNER_TEMP/play-venv/bin/python" scripts/sync_play.py "${args[@]}"
+          "$RUNNER_TEMP/play-venv/bin/python" scripts/sync_subscriptions.py
+
+      - name: Push the store listing and graphics
+        if: env.CHANNEL == 'play' && inputs.push_listing
+        run: |
+          fastlane supply \
+            --package_name com.pvd.scwcontrolroom \
+            --metadata_path fastlane/metadata/android \
+            --skip_upload_apk \
+            --skip_upload_aab \
+            --skip_upload_changelogs \
+            --sync_image_upload
 
       - name: Remove the upload key
         if: always()

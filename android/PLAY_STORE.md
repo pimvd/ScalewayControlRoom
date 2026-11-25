@@ -1,8 +1,9 @@
 # Google Play
 
 Every push to master that changes the Android app builds the bundle with
-Pro sold through Google Play Billing (`-Pstore=play`) and uploads it to the
-internal testing track (`.github/workflows/android-release.yml`). Promote a
+Pro sold through Google Play Billing (`-Pstore=play`) and uploads it with
+fastlane supply to the internal testing track, with the release notes from
+`PlayStore/listing.json` (`.github/workflows/android-release.yml`). Promote a
 release to production in the Play Console. The signed APK on GitHub Releases
 (`DISTRIBUTION.md`) stays available, with every feature free.
 
@@ -50,16 +51,18 @@ release to production in the Play Console. The signed APK on GitHub Releases
 5. **The first bundle by hand.** Play wants the very first upload done in
    the Play Console: run the Android release workflow (channel `play`), take
    the bundle from the run's artifacts, and upload it to the internal track.
-6. **The subscription and the store listing**, pushed from `PlayStore/` by
-   `scripts/sync_play.py`, as `sync_subscriptions.py` and fastlane do for the
-   iPhone app: give the service account *Manage store presence* for the app
-   in the Play Console, then run the Android release workflow with
-   `push_subscriptions` and `push_listing` on (`upload_build` off to push only
-   those). The subscription is `pro` with base plans `yearly` (P1Y, €19.99)
-   and `monthly` (P1M, €1.99), priced in euros and converted by Google for
-   every other region; the IDs must match `ProProducts` (checked by
-   `scripts/validate_listing.py`). Add yourself as a license tester to buy it
-   without being charged.
+6. **The subscription and the store listing.** Pushed from `PlayStore/` as
+   the iPhone app's are from `AppStore/`: fastlane supply uploads the
+   listing's text and graphics (`scripts/listing_to_fastlane.py` converts them
+   to its layout), and `scripts/sync_subscriptions.py` creates the
+   subscription, which fastlane cannot. Give the service account *Manage
+   store presence* for the app in the Play Console, then run the Android
+   release workflow with `push_subscriptions` and `push_listing` on
+   (`upload_build` off to push only those). The subscription is `pro` with
+   base plans `yearly` (P1Y, €19.99) and `monthly` (P1M, €1.99), priced in
+   euros and converted by Google for every other region; the IDs must match
+   `ProProducts` (checked by `scripts/validate_listing.py`). Add yourself as a
+   license tester to buy it without being charged.
 7. **The store listing's other settings** in the Play Console, once: the app's
    category, contact email and website (Store settings).
 8. **App content:** privacy policy URL, ads: none, data safety: no data
