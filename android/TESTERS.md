@@ -8,13 +8,13 @@ Scaleway account: the demo shows everything.
 
 The page testers follow is `website/android-test.html`, published at
 https://vandijkcloud.nl/Scaleway-ControlRoom/android-test.html. It links the
-tester group (https://groups.google.com/g/controlroom-testers, anyone may
+tester group (https://groups.google.com/g/scaleway-controlroom-testers, anyone may
 join) and the closed test's opt-in page
 (https://play.google.com/apps/testing/com.pvd.scwcontrolroom).
 
 ## Setting up the test
 
-Done: the Google Group `controlroom-testers@googlegroups.com` is the tester
+Done: the Google Group `scaleway-controlroom-testers@googlegroups.com` is the tester
 list of the closed test (Alpha) in the Play Console. After 14 days with 12
 testers or more, apply for production access on the Play Console dashboard.
 
