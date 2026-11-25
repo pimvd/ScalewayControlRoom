@@ -216,23 +216,25 @@ jobs:
             --skip_upload_screenshots
 
       # The service account needs "Manage store presence" for these two.
-      - name: Sync the Pro subscription
-        if: env.CHANNEL == 'play' && inputs.push_subscriptions
-        run: |
-          python3 -m venv "$RUNNER_TEMP/play-venv"
-          "$RUNNER_TEMP/play-venv/bin/pip" install --quiet google-auth requests
-          "$RUNNER_TEMP/play-venv/bin/python" scripts/sync_subscriptions.py
-
+      # supply attaches a listing to a track's release: the internal one.
       - name: Push the store listing and graphics
         if: env.CHANNEL == 'play' && inputs.push_listing
         run: |
           fastlane supply \
             --package_name com.pvd.scwcontrolroom \
             --metadata_path fastlane/metadata/android \
+            --track internal \
             --skip_upload_apk \
             --skip_upload_aab \
             --skip_upload_changelogs \
             --sync_image_upload
+
+      - name: Sync the Pro subscription
+        if: env.CHANNEL == 'play' && inputs.push_subscriptions
+        run: |
+          python3 -m venv "$RUNNER_TEMP/play-venv"
+          "$RUNNER_TEMP/play-venv/bin/pip" install --quiet google-auth requests
+          "$RUNNER_TEMP/play-venv/bin/python" scripts/sync_subscriptions.py
 
       - name: Remove the upload key
         if: always()
