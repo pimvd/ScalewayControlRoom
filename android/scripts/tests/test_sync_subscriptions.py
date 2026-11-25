@@ -24,6 +24,7 @@ class FakePlay:
 
     def request(self, method, url, params=None, body=None):
         self.calls.append((method, url.replace(APP, "")))
+        self.params = params
         if url.endswith("/pricing:convertRegionPrices"):
             price = body["price"]
             return {
@@ -32,8 +33,10 @@ class FakePlay:
                     "US": {"regionCode": "US", "price": {"currencyCode": "USD", "units": "2", "nanos": 490000000}},
                 },
                 "convertedOtherRegionsPrice": {"usdPrice": {"currencyCode": "USD"}, "eurPrice": price},
+                "regionVersion": {"version": "2025/03"},
             }
         if url.endswith("/subscriptions") and method == "POST":
+            self.created_with = params
             self.subscription = {**body, "basePlans": [{**plan, "state": "DRAFT"} for plan in body["basePlans"]]}
             return self.subscription
         if "/subscriptions/pro" in url and method == "GET":
@@ -75,6 +78,8 @@ class SyncSubscriptionsTest(unittest.TestCase):
         self.assertEqual(nl["price"], sync_subscriptions.money("1.99"))
         self.assertTrue(all(plan["state"] == "ACTIVE" for plan in plans.values()))
         self.assertEqual(play.subscription["listings"][0]["title"], "ControlRoom Pro")
+        # Created against the region list the prices were converted for.
+        self.assertEqual(play.created_with["regionsVersion.version"], "2025/03")
         self.assertIn("created", log.getvalue())
 
     def test_a_second_run_changes_nothing(self):

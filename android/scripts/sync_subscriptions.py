@@ -25,8 +25,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent / "PlayStore"
 API = "https://androidpublisher.googleapis.com/androidpublisher/v3/applications"
-# The region list subscriptions are priced against; Google's current one.
-REGIONS_VERSION = {"regionsVersion.version": "2022/02"}
+# The region list subscriptions are priced against, when Google's price
+# conversion does not name the one it used.
+REGIONS_VERSION = "2022/02"
 CURRENCY = "EUR"
 
 
@@ -75,6 +76,7 @@ class Sync:
         self.config = json.loads((self.folder / "subscriptions.json").read_text(encoding="utf-8"))
         self.package = self.listing["package_name"]
         self.app = f"{API}/{self.package}"
+        self.regions_version = REGIONS_VERSION
 
     # Subscription
 
@@ -89,6 +91,9 @@ class Sync:
     def base_plan(self, plan):
         converted = self.api.request("POST", f"{self.app}/pricing:convertRegionPrices",
                                      body={"price": money(plan["price_eur"])})
+        # The prices are in the currencies of the region list Google used (a
+        # region may move from USD to its own currency); create against it.
+        self.regions_version = converted.get("regionVersion", {}).get("version", self.regions_version)
         regions = [{"regionCode": region, "newSubscriberAvailability": True, "price": value["price"]}
                    for region, value in sorted(converted.get("convertedRegionPrices", {}).items())]
         base_plan = {
@@ -111,16 +116,21 @@ class Sync:
         except NotFound:
             existing = None
         if existing is None:
-            existing = self.api.request("POST", f"{self.app}/subscriptions", params={"productId": product, **REGIONS_VERSION}, body={
+            base_plans = [self.base_plan(plan) for plan in self.config["base_plans"]]
+            existing = self.api.request("POST", f"{self.app}/subscriptions", params={
+                "productId": product, "regionsVersion.version": self.regions_version,
+            }, body={
                 "packageName": self.package,
                 "productId": product,
                 "listings": self.subscription_listings(),
-                "basePlans": [self.base_plan(plan) for plan in self.config["base_plans"]],
+                "basePlans": base_plans,
             })
             self.log(f"Subscription {product}: created")
         else:
             if existing.get("listings") != self.subscription_listings():
-                existing = self.api.request("PATCH", url, params={"updateMask": "listings", **REGIONS_VERSION}, body={
+                existing = self.api.request("PATCH", url, params={
+                    "updateMask": "listings", "regionsVersion.version": self.regions_version,
+                }, body={
                     "packageName": self.package, "productId": product, "listings": self.subscription_listings(),
                 })
                 self.log(f"Subscription {product}: listing updated")
