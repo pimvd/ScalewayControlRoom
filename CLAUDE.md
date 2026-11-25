@@ -89,10 +89,10 @@ same split as iOS:
 
 ### Shared
 
-- `website/`: marketing page, support (also the key setup guide and the
-  Android install guide, `support.html#android`), privacy, and
-  `android-test.html` for the Play closed test's testers (`android/TESTERS.md`
-  has the recruiting messages).
+- `website/`: marketing page, support (also the key setup guide), privacy,
+  and `android-test.html` for the Play closed test's testers (`android/TESTERS.md`
+  has the recruiting messages). Android users are sent to the test, later to
+  Google Play; the website does not mention the GitHub APK.
   The Website workflow uploads it with the app icon and the App Store
   screenshots to `vandijkcloud.nl/Scaleway-ControlRoom/` over FTP.
 
