@@ -83,14 +83,16 @@ same split as iOS:
   emulator needed.
 - `DISTRIBUTION.md`: how the app is published, as a signed APK on GitHub
   Releases, and the signing key.
-- `PlayStore/` the listing, subscriptions, graphics and the closed test's
-  tester page; `scripts/validate_listing.py` checks them against the app.
+- `PlayStore/` the listing, subscriptions and graphics;
+  `scripts/validate_listing.py` checks them against the app.
   `PLAY_STORE.md`: the Google Play setup; `TESTERS.md`: finding testers.
 
 ### Shared
 
 - `website/`: marketing page, support (also the key setup guide and the
-  Android install guide, `support.html#android`) and privacy.
+  Android install guide, `support.html#android`), privacy, and
+  `android-test.html` for the Play closed test's testers (`android/TESTERS.md`
+  has the recruiting messages).
   The Website workflow uploads it with the app icon and the App Store
   screenshots to `vandijkcloud.nl/Scaleway-ControlRoom/` over FTP.
 

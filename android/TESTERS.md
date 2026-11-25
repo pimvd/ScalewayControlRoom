@@ -6,19 +6,17 @@ in for 14 days in a row.
 Aim for 15–20. Testers need an Android phone and a Google account, not a
 Scaleway account: the demo shows everything.
 
-The page testers follow is `PlayStore/tester-page.html`. Fill in its two
-links (the Google Group and the test's opt-in link), then copy it to
-`website/android-test.html`, which publishes it at
-https://vandijkcloud.nl/Scaleway-ControlRoom/android-test.html.
+The page testers follow is `website/android-test.html`, published at
+https://vandijkcloud.nl/Scaleway-ControlRoom/android-test.html. It links the
+tester group (https://groups.google.com/g/controlroom-testers, anyone may
+join) and the closed test's opt-in page
+(https://play.google.com/apps/testing/com.pvd.scwcontrolroom).
 
 ## Setting up the test
 
-1. Make a Google Group (groups.google.com) that anyone can join, for example
-   `controlroom-testers`.
-2. In the Play Console: Testing → Closed testing → create a track, add the
-   group's email address as the tester list, and upload a bundle from the
-   Android release workflow.
-3. Copy the track's opt-in link and the group's link into the tester page.
+Done: the Google Group `controlroom-testers@googlegroups.com` is the tester
+list of the closed test (Alpha) in the Play Console. After 14 days with 12
+testers or more, apply for production access on the Play Console dashboard.
 
 ## Message for colleagues and friends
 
